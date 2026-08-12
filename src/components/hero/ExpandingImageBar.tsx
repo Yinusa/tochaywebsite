@@ -59,12 +59,12 @@ export default function ExpandingImageBar() {
     const ctx = gsap.context(() => {
       if (!containerRef.current) return;
 
-      // Expand the container: width (90% -> 100%), height (200px -> 600px), border-radius (24px -> 0px)
+      // Expand the container to align with header grid limits and keep a subtle rounded border
       gsap.to(containerRef.current, {
         width: "100%",
-        maxWidth: "100%",
+        maxWidth: "1280px",      // Caps expansion to max-w-7xl to match header grid limits
         height: "600px",
-        borderRadius: "0px",
+        borderRadius: "12px",     // Keeps a subtle rounded corner at final expansion
         ease: "none",
         scrollTrigger: {
           trigger: containerRef.current,
@@ -96,11 +96,11 @@ export default function ExpandingImageBar() {
   }, []);
 
   return (
-    <div className="w-full bg-[#f8f8f7] pt-12 pb-24 overflow-hidden flex justify-center">
+    <div className="w-full bg-[#f8f8f7] pt-12 pb-24 px-6 sm:px-8 md:px-12 overflow-hidden flex justify-center">
       {/* Expanding outer bar - starts as rounded centered block */}
       <div
         ref={containerRef}
-        className="relative w-[90%] md:w-[85%] max-w-6xl h-[200px] sm:h-[260px] rounded-2xl overflow-hidden shadow-xs transition-shadow duration-300"
+        className="relative w-[90%] md:w-[80%] max-w-5xl h-[200px] sm:h-[260px] rounded-2xl overflow-hidden shadow-xs transition-shadow duration-300"
       >
         {images.map((src, index) => {
           const isActive = index === activeIndex;
