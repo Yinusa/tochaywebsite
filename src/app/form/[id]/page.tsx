@@ -164,8 +164,17 @@ export default function PublicFormPage() {
       const file = filesList[i];
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
 
-      // Check extensions
-      if (!allowedExtensions.includes(ext)) {
+      // Check extensions (allowing JPG and JPEG interchangeably)
+      let isAllowed = allowedExtensions.includes(ext);
+      if (!isAllowed) {
+        if (ext === ".jpeg" && allowedExtensions.includes(".jpg")) {
+          isAllowed = true;
+        } else if (ext === ".jpg" && allowedExtensions.includes(".jpeg")) {
+          isAllowed = true;
+        }
+      }
+
+      if (!isAllowed) {
         setErrorAlert(`Invalid file format "${file.name}". Allowed types: ${allowedExtensions.join(", ")}`);
         return;
       }
