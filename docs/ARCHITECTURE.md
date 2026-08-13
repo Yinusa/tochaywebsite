@@ -78,3 +78,47 @@ To avoid jitter and visual lagging when scrubbing animations on scroll:
 - Target text spans are bound to GSAP `TextPlugin`.
 - The animation is triggered by `ScrollTrigger` bound to the Hero section container.
 - Scrubbing is set to `0.5` seconds. Downscroll increments the typing animation forward character-by-character; upscroll reverses the timeline, creating a backspace/deletion effect.
+
+---
+
+## 5. Design System Tokens & Layout Constants
+
+### 5.1 Color Variables
+- **Off-White Canvas (Home bg)**: `#f8f8f7`
+- **Dark Charcoal Canvas (Case Studies bg / Footer bg)**: `#09090b`
+- **Brand Accent Yellow (CTAs / Hover states)**: `#ffd230`
+
+### 5.2 Typography System
+- **Corporate Branding Text**: Gilroy (Custom local font in `public/fonts/`). Weights: Gilroy-Medium (static text), Gilroy-SemiBold (headlines), Gilroy-Bold.
+- **Editorial Text**: Ogg (Editorial serif, italic styling).
+- **Signature Font**: Monsieur La Doulaise (Google Font `font-signature` for lowercase signature accents).
+
+### 5.3 Viewport Grid & Card Sizing
+- **Grid Alignment**: Max-width of `1280px` (`max-w-7xl`). Left/right padding of `24px` (`px-6`) on mobile, `32px` (`px-8`) on tablet, and `48px` (`px-12`) on desktop.
+- **Dynamic Grid Offset Calc**: Left paddings on edge-to-edge carousels are calculated dynamically in CSS: `pl-[max(48px,calc((100vw-1280px)/2+48px))]` to align starting elements with standard grid lines.
+- **PC Card Sizes (Case Studies)**: Staggered height columns centered vertically or aligned to base line:
+  - Tall: `h-[580px] w-[400px]`
+  - Medium: `h-[490px] w-[400px]`
+  - Short: `h-[400px] w-[400px]`
+- **Mobile Card Sizes**: Uniform `h-[340px] w-[280px]` elements.
+
+---
+
+## 6. Scroll & Theme Navigation Dynamics
+
+### 6.1 Auto-Hiding Navbar
+- Navbar Visibility is computed by scrolling delta accumulations:
+  - **Scroll Down (Swiping Up)**: Hides the navbar (`-translate-y-full`) once scroll down delta exceeds `150px` (approximately 3 swipes).
+  - **Scroll Up (Swiping Down)**: Reveals the navbar (`translate-y-0`) once scroll up delta exceeds `30px` (approximately 1 scroll).
+
+### 6.2 Navbar Theme Transitions
+- Navbar observes sections with `data-theme="dark"`:
+  - If the viewport top crosses into a dark section (e.g. Case Studies or Footer), Navbar:
+    - Renders the white brand logo (`toflogowhite.png`).
+    - Colorizes hamburger bars to white (`bg-white`).
+    - Applies `bg-zinc-950/90 backdrop-blur-md border-zinc-900` styling when scrolled.
+  - If the viewport crosses into light sections, Navbar:
+    - Renders the black brand logo (`toflogoblack.png`).
+    - Colorizes hamburger bars to dark (`bg-zinc-950`).
+    - Applies `bg-[#f8f8f7]/95 backdrop-blur-md border-zinc-100` styling when scrolled.
+

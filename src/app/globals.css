@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Monsieur+La+Doulaise&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Gilroy", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-editorial: "Ogg", Georgia, serif;
   --font-script: "Amsterdam", cursive;
+  --font-signature: "Monsieur La Doulaise", cursive;
   --font-mono: var(--font-space-mono), monospace;
 
   --color-canvas: #f8f8f7;
