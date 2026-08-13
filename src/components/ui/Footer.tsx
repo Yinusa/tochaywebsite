@@ -76,6 +76,12 @@ export default function Footer() {
           >
             About
           </Link>
+          <Link
+            href="/pricing"
+            className="font-sans font-medium text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors duration-300"
+          >
+            Pricing
+          </Link>
         </div>
 
         {/* Bottom controls panel */}

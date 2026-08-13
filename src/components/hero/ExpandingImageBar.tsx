@@ -5,6 +5,8 @@ import Image from "next/image";
 import { gsap } from "@/lib/gsap-config";
 import { supabase } from "@/lib/supabase";
 
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
+
 const LOCAL_IMAGES = [
   "/images/portfolio-templates.png",
   "/images/portfolio-templates2.png",
@@ -17,42 +19,68 @@ export default function ExpandingImageBar() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [images, setImages] = useState<string[]>(LOCAL_IMAGES);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [intervalMs, setIntervalMs] = useState(2500);
 
-  // 1. Fetch images from Supabase showcase if connected
+  // 1. Fetch images and switch timing from Supabase if connected
   useEffect(() => {
-    async function loadShowcaseImages() {
+    async function loadShowcaseData() {
+      let loadedImages = false;
+
       try {
-        // Only run fetch if we have valid environment keys (not placeholder)
-        if (
-          process.env.NEXT_PUBLIC_SUPABASE_URL &&
-          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-        ) {
-          const { data, error } = await supabase
+        const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+        if (!isPlaceholder) {
+          const { data: imgData, error: imgError } = await supabase
             .from("showcase_images")
             .select("url_path")
             .order("position", { ascending: true });
 
-          if (!error && data && data.length > 0) {
-            setImages(data.map((item) => item.url_path));
+          if (!imgError && imgData && imgData.length > 0) {
+            setImages(imgData.map((item) => item.url_path));
+            loadedImages = true;
+          }
+
+          const { data: settingsData } = await supabase
+            .from("site_settings")
+            .select("slideshow_interval")
+            .limit(1)
+            .maybeSingle();
+
+          if (settingsData && settingsData.slideshow_interval) {
+            setIntervalMs(Number(settingsData.slideshow_interval));
           }
         }
       } catch (err) {
-        console.error("Failed to load images from Supabase:", err);
+        console.error("Failed to load showcase data from Supabase:", err);
+      }
+
+      // Local storage fallback for local testing & offline mode
+      if (!loadedImages) {
+        try {
+          const localData = localStorage.getItem("tochay_offline_showcase_images");
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setImages(parsed.map((item: any) => item.url_path));
+            }
+          }
+        } catch (localErr) {
+          console.error("Failed to read showcase from local storage cache:", localErr);
+        }
       }
     }
 
-    loadShowcaseImages();
+    loadShowcaseData();
   }, []);
 
-  // 2. Looping slideshow cycle every 2.5 seconds (cycles even after scrolling stops)
+  // 2. Looping slideshow cycle
   useEffect(() => {
     if (images.length === 0) return;
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % images.length);
-    }, 2500);
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [images.length, intervalMs]);
 
   // 3. GSAP scroll-driven expanding and parallax animation
   useLayoutEffect(() => {
@@ -120,6 +148,8 @@ export default function ExpandingImageBar() {
                   sizes="100vw"
                   className="object-cover object-center select-none"
                   priority={index === 0}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
             </div>

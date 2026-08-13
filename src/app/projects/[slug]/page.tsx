@@ -8,6 +8,9 @@ import { X } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
 import { PROJECTS } from "@/lib/projects-data";
 import Footer from "@/components/ui/Footer";
+import { supabase } from "@/lib/supabase";
+
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -18,9 +21,34 @@ export default function ProjectPage({ params }: PageProps) {
   const slug = resolvedParams?.slug || "";
   const router = useRouter();
 
+  const [projectList, setProjectList] = useState<any[]>(PROJECTS);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        if (
+          process.env.NEXT_PUBLIC_SUPABASE_URL &&
+          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+        ) {
+          const { data, error } = await supabase
+            .from("portfolio_projects")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            setProjectList(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase fetch failed:", err);
+      }
+    };
+    fetchProjects();
+  }, []);
+
   // Find project matching the slug (stripping duplicate suffixes if routing from explore)
   const baseSlug = slug.replace(/-dup\d+$/, "");
-  const project = PROJECTS.find((p) => p.slug === baseSlug) || PROJECTS[0];
+  const project = projectList.find((p) => p.slug === baseSlug) || projectList[0] || PROJECTS[0];
 
   const pcScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -247,16 +275,18 @@ export default function ProjectPage({ params }: PageProps) {
   }, []);
 
   // Flatten media array to get all images for PC horizontal scroll
-  const pcMediaItems = project.media.flatMap((block) => block.images);
+  const pcMediaItems = (project && Array.isArray(project.media)) 
+    ? project.media.flatMap((block: any) => block.images || []) 
+    : [];
 
   // Example designs for the bottom 2-column grid row
   const moreDesigns = ["/images/grit5.jpeg", "/images/grit6.png"];
 
   // Sort next project sequence starting from index after the current slug item
-  const currentIdx = PROJECTS.findIndex((p) => p.slug === baseSlug);
+  const currentIdx = projectList.findIndex((p) => p.slug === baseSlug);
   const nextProjectsSequence = [
-    ...PROJECTS.slice(currentIdx + 1),
-    ...PROJECTS.slice(0, currentIdx + 1),
+    ...projectList.slice(currentIdx + 1),
+    ...projectList.slice(0, currentIdx + 1),
   ].filter((p) => p.slug !== baseSlug);
 
   return (
@@ -335,7 +365,7 @@ export default function ProjectPage({ params }: PageProps) {
           className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
             }`}
         >
-          {pcMediaItems.map((media, idx) => (
+          {pcMediaItems.map((media: any, idx: number) => (
             <div
               key={`pc-media-${idx}`}
               className={`pc-media-card shrink-0 relative h-[500px] ${media.aspect} rounded-2xl md:rounded-3xl overflow-hidden border border-zinc-200/50 bg-zinc-100 shadow-md select-none isolate translate-z-0`}
@@ -352,6 +382,8 @@ export default function ProjectPage({ params }: PageProps) {
                 sizes="(max-w-1024px) 100vw, 800px"
                 className="object-cover object-center select-none"
                 priority={idx < 2}
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
               />
             </div>
           ))}
@@ -360,7 +392,7 @@ export default function ProjectPage({ params }: PageProps) {
 
       {/* Mobile Vertical Grid Gallery (Single or Double columns, Equal aspect ratios) */}
       <div className="w-full md:hidden flex flex-col gap-4 px-6 pb-12">
-        {project.media.map((block, bIdx) => {
+        {((project as any).media as any[] || []).map((block: any, bIdx: number) => {
           if (block.type === "single") {
             const media = block.images[0];
             return (
@@ -379,6 +411,8 @@ export default function ProjectPage({ params }: PageProps) {
                   fill
                   sizes="(max-w-768px) 100vw, 400px"
                   className="object-cover object-center select-none"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
             );
@@ -389,7 +423,7 @@ export default function ProjectPage({ params }: PageProps) {
                 key={`mobile-block-${bIdx}`}
                 className="w-full grid grid-cols-2 gap-4"
               >
-                {block.images.map((media, mIdx) => (
+                {(block.images as any[]).map((media: any, mIdx: number) => (
                   <div
                     key={`mobile-double-${bIdx}-${mIdx}`}
                     className="mobile-media-card w-full aspect-square relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-sm isolate translate-z-0"
@@ -405,6 +439,8 @@ export default function ProjectPage({ params }: PageProps) {
                       fill
                       sizes="(max-w-768px) 50vw, 200px"
                       className="object-cover object-center select-none"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
                     />
                   </div>
                 ))}
@@ -489,6 +525,8 @@ export default function ProjectPage({ params }: PageProps) {
                 fill
                 sizes="(max-w-768px) 50vw, 600px"
                 className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
               />
             </div>
           ))}
@@ -541,6 +579,8 @@ export default function ProjectPage({ params }: PageProps) {
                     fill
                     sizes="300px"
                     className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
                   />
                 </div>
 

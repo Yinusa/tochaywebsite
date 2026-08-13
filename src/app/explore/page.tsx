@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
 import { PROJECTS } from "@/lib/projects-data";
 import Footer from "@/components/ui/Footer";
+import { supabase } from "@/lib/supabase";
 
 // 11 portfolio elements recycling the 8 database items
 const EXPLORE_PROJECTS = [
@@ -111,9 +112,40 @@ export default function ExplorePage() {
     return () => ctx.revert();
   }, []);
 
-  const row1 = EXPLORE_PROJECTS.slice(0, 4);  // 4 items
-  const row2 = EXPLORE_PROJECTS.slice(4, 7);  // 3 items
-  const row3 = EXPLORE_PROJECTS.slice(7, 11); // 4 items
+  const [projectList, setProjectList] = useState<any[]>(EXPLORE_PROJECTS);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        if (
+          process.env.NEXT_PUBLIC_SUPABASE_URL &&
+          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+        ) {
+          const { data, error } = await supabase
+            .from("portfolio_projects")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            const recycled = [
+              ...data,
+              { ...data[0], slug: `${data[0].slug}-dup1` },
+              { ...data[1 % data.length], slug: `${data[1 % data.length].slug}-dup2` },
+              { ...data[2 % data.length], slug: `${data[2 % data.length].slug}-dup3` },
+            ];
+            setProjectList(recycled);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase fetch failed, falling back to static projects dataset:", err);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  const row1 = projectList.slice(0, 4);  // 4 items
+  const row2 = projectList.slice(4, 7);  // 3 items
+  const row3 = projectList.slice(7, 11); // 4 items
 
   return (
     <div

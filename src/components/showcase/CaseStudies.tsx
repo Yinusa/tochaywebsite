@@ -1,17 +1,44 @@
 "use client";
 
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
+import { supabase } from "@/lib/supabase";
 
 import { PROJECTS } from "@/lib/projects-data";
 
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
+
 export default function CaseStudies() {
+  const [projectList, setProjectList] = useState(PROJECTS);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        if (
+          process.env.NEXT_PUBLIC_SUPABASE_URL &&
+          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+        ) {
+          const { data, error } = await supabase
+            .from("portfolio_projects")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            setProjectList(data as any);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase fetch failed, falling back to static projects dataset:", err);
+      }
+    };
+    fetchProjects();
+  }, []);
   
   const startX = useRef(0);
   const scrollLeftVal = useRef(0);
@@ -105,7 +132,7 @@ export default function CaseStudies() {
           }`}
         >
           {/* Dynamic Project Cards */}
-          {PROJECTS.map((project, index) => {
+          {projectList.map((project, index) => {
             // PC Staggered Heights: Tall -> Medium -> Short
             const heightClasses = [
               "md:h-[580px]", // Tall
@@ -145,6 +172,8 @@ export default function CaseStudies() {
                     sizes="(max-w-768px) 100vw, 400px"
                     className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
                     priority={index < 2}
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
                   />
 
                   {/* Gradient Overlay removed for bright, undimmed card look */}

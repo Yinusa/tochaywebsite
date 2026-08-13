@@ -58,3 +58,25 @@ To ensure the portfolio looks stunning across devices, we use fluid typographic 
   - Hero margins: `pt-32 pb-20` (128px / 80px)
   - Layout gaps: `gap-6` on mobile to `gap-12` on desktop structures.
 - **Visual Stability**: The dynamic word element has a min-width declaration (`min-w-[220px]` on mobile, scaling up to `min-w-[450px]` on desktop) to prevent horizontal layout shift or shifting adjacent text during word swap cycles.
+
+---
+
+## 4. Mobile Responsiveness & Touch Accessibility Guidelines
+
+To maintain visual excellence, fluid motion, and zero layout shift on mobile screens (viewports `< 768px`), follow these mobile-first guidelines:
+
+### 4.1 Navigation Sidebar-to-Tab Refactoring
+- **Layout Conversion**: Sidebars and main panel listings (such as the admin workspace panel) must adapt to the viewport:
+  - **Desktop (`>=768px`)**: Stack vertically in left-aligned columns (`flex-col w-64`).
+  - **Mobile (`<768px`)**: Refactor into horizontal scrolling layouts (`flex-row overflow-x-auto scrollbar-none pb-4`) to save vertical viewport space.
+- **Visual Polish**: Always apply the `.scrollbar-none` utility class to hide desktop-style scrollbars on swipable touch rails while retaining native swipe gestures.
+
+### 4.2 Spacing, Grids, and Inputs
+- **Column Scaling**: Grids must utilize responsive breakpoints (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`) to prevent structural squash and text truncation on small screen ratios.
+- **Touch Target Dimensions**: Interactive hit targets (buttons, input fields, checkboxes, and links) must maintain a minimum target height/width of `44px` (WCAG 2.1 touch accessibility requirements) to prevent neighboring clicks.
+- **Padding Scalers**: Space paddings decrease on small viewports (e.g. `p-6` to `p-4`) to maximize visible copy area, while vertical spacers scale down (`py-20` on desktop down to `py-10` on mobile) for tighter visual grouping.
+
+### 4.3 Image Responsiveness
+- **Aspect Ratio Boxes**: Use standard container aspect ratios (`aspect-video`, `aspect-[16/10]`) with `object-cover` styling to crop and scale images nicely on variable widths.
+- **Horizontal Leak Interceptors**: Avoid hardcoded widths (`w-[600px]`). Instead, use relative layout widths (`w-full`, `max-w-md`) and safe containers with `overflow-x-hidden` wrappers to eliminate horizontal page scrolling on mobile browsers.
+

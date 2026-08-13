@@ -8,8 +8,41 @@ import { X } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
 import { PRODUCT_DESIGN_PROJECTS } from "@/lib/projects-data";
 import Footer from "@/components/ui/Footer";
+import { supabase } from "@/lib/supabase";
 
 export default function ProductDesignExplorePage() {
+  const [projectList, setProjectList] = useState<any[]>(PRODUCT_DESIGN_PROJECTS);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        if (
+          process.env.NEXT_PUBLIC_SUPABASE_URL &&
+          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+        ) {
+          const { data, error } = await supabase
+            .from("portfolio_projects")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            const filtered = data.filter(
+              (p) =>
+                p.category === "BRAND DESIGN" ||
+                p.category === "BRAND SYSTEM" ||
+                p.category === "VISUAL SYSTEM" ||
+                p.category === "MOTION"
+            );
+            setProjectList(filtered);
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase fetch failed:", err);
+      }
+    };
+    fetchProjects();
+  }, []);
+
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -68,7 +101,7 @@ export default function ProductDesignExplorePage() {
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/#capabilities-section");
+      router.push("/#case-studies-section");
     }
   };
 
@@ -127,7 +160,7 @@ export default function ProductDesignExplorePage() {
           <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
             <div></div>
             <a
-              href="/#capabilities-section"
+              href="/#case-studies-section"
               onClick={handleClose}
               className="group flex items-center gap-2 font-sans font-semibold text-xs sm:text-sm text-white hover:text-zinc-300 transition-colors duration-300 cursor-pointer"
             >
@@ -157,7 +190,7 @@ export default function ProductDesignExplorePage() {
         className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 py-16 md:py-24"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          {PRODUCT_DESIGN_PROJECTS.map((project, idx) => (
+          {projectList.map((project, idx) => (
             <Link
               key={project.slug}
               href={`/projects/${project.slug}`}
