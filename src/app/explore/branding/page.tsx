@@ -23,6 +23,7 @@ export default function BrandingExplorePage() {
           const { data, error } = await supabase
             .from("portfolio_projects")
             .select("*")
+            .order("position", { ascending: true })
             .order("created_at", { ascending: false });
 
           if (!error && data && data.length > 0) {

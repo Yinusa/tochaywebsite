@@ -70,3 +70,33 @@
      ```
 3. **No Layout Shifting**:
    - Always declare responsive base heights (`min-h-[]`) or base widths (`min-w-[]`) for dynamically loaded text blocks so the surrounding DOM layout does not jitter when text morphs or loads.
+
+---
+
+## 3. Custom Forms Module Components
+
+### 3.1 Custom Form Builder Component (`FormBuilderTab.tsx`)
+- **Location**: `src/components/admin/FormBuilderTab.tsx`
+- **Purpose**: Admin-side workspace form builder interface.
+- **Interactions**:
+  - Full-width drag-and-drop handles for layout reordering using native HTML5 drag APIs.
+  - Interactive setting controls for allowed types, size limits, and required flags.
+  - Real-time link generator with clipboard integration.
+
+### 3.2 Dynamic Form Intake Portal (`page.tsx`)
+- **Location**: `src/app/form/[id]/page.tsx`
+- **Purpose**: High-end public client submission portal matching the studio's off-white canvas layout.
+- **Interactions**:
+  - Drag-and-drop files drop-zone with size & type validation (treating `.jpg` and `.jpeg` interchangeably).
+  - Multi-file progressive loader state indicators.
+  - Secure integration with the `showcase` storage bucket under the `form-uploads/` directory.
+
+### 3.3 Submissions Responses Inspector (`page.tsx`)
+- **Location**: `src/app/admin/forms/[id]/responses/page.tsx`
+- **Purpose**: Dashboard responses list and details sliding drawer.
+- **Interactions**:
+  - Display answers grouped directly under their corresponding question.
+  - Client-side folder zipping engine (`JSZip`) for zipping and downloading all assets in batch.
+  - Direct local same-origin browser downloading fallback handlers.
+  - Storage deletion cleanup triggers upon submission deletion.
+

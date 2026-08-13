@@ -26,7 +26,9 @@ import {
   ChevronDown,
   FileText,
   Upload,
-  Loader2
+  Loader2,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -42,6 +44,11 @@ interface ProjectItem {
   stage: string;
   about: string;
   media: any;
+  subtitle?: string;
+  cover_image_url?: string;
+  summary_text?: string;
+  full_text?: string;
+  position?: number;
 }
 
 interface ServiceItem {
@@ -132,6 +139,8 @@ export default function AdminPage() {
   // Editor states
   const [pricingActiveSubTab, setPricingActiveSubTab] = useState<"packages" | "services" | "coupons">("packages");
   const [editingProject, setEditingProject] = useState<Partial<ProjectItem> | null>(null);
+  const [projectShowcaseImages, setProjectShowcaseImages] = useState<any[]>([]);
+  const [isProjectsOrderDirty, setIsProjectsOrderDirty] = useState(false);
   const [editingService, setEditingService] = useState<Partial<ServiceItem> | null>(null);
   const [editingCard, setEditingCard] = useState<Partial<CardItem> | null>(null);
   const [editingCoupon, setEditingCoupon] = useState<Partial<CouponItem> | null>(null);
@@ -140,6 +149,8 @@ export default function AdminPage() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
+
+  const isMounted = useRef(false);
 
   // Persist admin panel navigation tabs across reloads to avoid UI layout reset confusion
   useEffect(() => {
@@ -151,14 +162,19 @@ export default function AdminPage() {
     if (savedSubTab === "packages" || savedSubTab === "services" || savedSubTab === "coupons") {
       setPricingActiveSubTab(savedSubTab);
     }
+    isMounted.current = true;
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("tochay_admin_active_tab", activeTab);
+    if (isMounted.current) {
+      localStorage.setItem("tochay_admin_active_tab", activeTab);
+    }
   }, [activeTab]);
 
   useEffect(() => {
-    localStorage.setItem("tochay_admin_pricing_sub_tab", pricingActiveSubTab);
+    if (isMounted.current) {
+      localStorage.setItem("tochay_admin_pricing_sub_tab", pricingActiveSubTab);
+    }
   }, [pricingActiveSubTab]);
   const [showInclusionsModal, setShowInclusionsModal] = useState(false);
   
@@ -213,6 +229,7 @@ export default function AdminPage() {
         const { data: dbProjects } = await supabase
           .from("portfolio_projects")
           .select("*")
+          .order("position", { ascending: true })
           .order("created_at", { ascending: false });
         if (dbProjects) setProjects(dbProjects);
       } catch (err) {
@@ -299,7 +316,7 @@ export default function AdminPage() {
       // 7. Showcase Slide Images
       try {
         const { data: dbShowcase } = await supabase
-          .from("showcase_images")
+          .from("hero_slideshow_images")
           .select("*")
           .order("position", { ascending: true });
         if (dbShowcase && dbShowcase.length > 0) {
@@ -384,28 +401,81 @@ export default function AdminPage() {
     setIsAuthenticated(false);
   };
 
+  const handleEditProjectClick = async (project: ProjectItem) => {
+    setEditingProject({
+      ...project,
+      subtitle: project.subtitle || project.tagline || "",
+      cover_image_url: project.cover_image_url || project.image || "",
+      summary_text: project.summary_text || project.about || "",
+      full_text: project.full_text || "",
+      media: typeof project.media === "string" ? project.media : JSON.stringify(project.media, null, 2)
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from("showcase_images")
+        .select("*")
+        .eq("project_id", project.id)
+        .order("display_order", { ascending: true });
+      if (!error && data) {
+        setProjectShowcaseImages(data);
+      } else {
+        setProjectShowcaseImages([]);
+      }
+    } catch (err) {
+      console.error("Failed to load showcase images:", err);
+      setProjectShowcaseImages([]);
+    }
+    setShowProjectModal(true);
+  };
+
   // Mutators: Save Portfolio Case Study
   const handleSaveProject = async () => {
-    if (!editingProject?.title || !editingProject?.slug) {
-      setAlert({ type: "error", message: "Title and unique slug fields are required." });
+    if (!editingProject?.title) {
+      setAlert({ type: "error", message: "Project title is required." });
       return;
     }
 
+    const titleStr = editingProject.title.trim();
+    const slugStr = (editingProject.slug || titleStr)
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-");
+
     try {
+      // Safely parse media JSON without throwing syntax errors
+      let parsedMedia = [];
+      if (typeof editingProject.media === "string") {
+        try {
+          parsedMedia = JSON.parse(editingProject.media || "[]");
+        } catch (jsonErr) {
+          console.warn("Could not parse media JSON string, defaulting to empty array:", jsonErr);
+          parsedMedia = [];
+        }
+      } else {
+        parsedMedia = editingProject.media || [];
+      }
+
       const payload = {
-        title: editingProject.title,
-        slug: editingProject.slug,
+        title: titleStr,
+        slug: slugStr,
         category: editingProject.category || "BRAND DESIGN",
-        tagline: editingProject.tagline || "",
-        image: editingProject.image || "/images/grit1.jpg",
+        tagline: editingProject.tagline || editingProject.subtitle || "",
+        image: editingProject.image || editingProject.cover_image_url || "/images/grit1.jpg",
         program: editingProject.program || "",
         industry: editingProject.industry || "",
         stage: editingProject.stage || "",
-        about: editingProject.about || "",
-        media: typeof editingProject.media === "string" 
-          ? JSON.parse(editingProject.media) 
-          : editingProject.media || []
+        about: editingProject.about || editingProject.summary_text || "",
+        media: parsedMedia,
+        subtitle: editingProject.subtitle || editingProject.tagline || "",
+        cover_image_url: editingProject.cover_image_url || editingProject.image || "/images/grit1.jpg",
+        summary_text: editingProject.summary_text || editingProject.about || "",
+        full_text: editingProject.full_text || "",
+        position: editingProject.id ? (editingProject.position ?? 0) : projects.length
       };
+
+      let projectId = editingProject.id;
 
       if (editingProject.id) {
         // Update
@@ -426,14 +496,43 @@ export default function AdminPage() {
           .single();
         if (error) throw error;
 
-        if (data) setProjects(prev => [data as ProjectItem, ...prev]);
+        if (data) {
+          projectId = data.id;
+          setProjects(prev => [data as ProjectItem, ...prev]);
+        }
         setAlert({ type: "success", message: "Case study created successfully." });
       }
+
+      // Sync showcase images
+      if (projectId) {
+        // Delete existing showcase images for this project
+        await supabase
+          .from("showcase_images")
+          .delete()
+          .eq("project_id", projectId);
+
+        // Insert new showcase images
+        if (projectShowcaseImages.length > 0) {
+          const showcasePayload = projectShowcaseImages.map((img, idx) => ({
+            project_id: projectId,
+            image_url: img.image_url,
+            block_type: img.block_type || "before",
+            display_order: idx + 1
+          }));
+          const { error: showcaseError } = await supabase
+            .from("showcase_images")
+            .insert(showcasePayload);
+          if (showcaseError) throw showcaseError;
+        }
+      }
+
       setShowProjectModal(false);
       setEditingProject(null);
+      setProjectShowcaseImages([]);
     } catch (err: any) {
-      console.error(err);
-      setAlert({ type: "error", message: err.message || "Failed to save portfolio project." });
+      console.warn("Failed to save portfolio project details:", err);
+      const errorDetail = err.message || err.details || err.hint || String(err);
+      setAlert({ type: "error", message: `Failed to save case study: ${errorDetail}` });
     }
   };
 
@@ -466,6 +565,23 @@ export default function AdminPage() {
             }
           }
         }
+
+        // Delete all showcase images from storage
+        try {
+          const { data: showcaseDbImages } = await supabase
+            .from("showcase_images")
+            .select("image_url")
+            .eq("project_id", id);
+          if (showcaseDbImages) {
+            for (const img of showcaseDbImages) {
+              if (img.image_url) {
+                await deleteStorageFileByUrl(img.image_url);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Showcase images cleanup warning:", err);
+        }
       }
 
       const { error } = await supabase.from("portfolio_projects").delete().eq("id", id);
@@ -475,6 +591,56 @@ export default function AdminPage() {
       setAlert({ type: "success", message: "Case study deleted successfully." });
     } catch (err: any) {
       setAlert({ type: "error", message: err.message || "Failed to delete project." });
+    }
+  };
+
+  const handleMoveProjectOrder = (index: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= projects.length) return;
+
+    // Create a copy of the list and swap the items
+    const reorderedList = [...projects];
+    const temp = reorderedList[index];
+    reorderedList[index] = reorderedList[targetIdx];
+    reorderedList[targetIdx] = temp;
+
+    // Update local state instantly for a snappy UI feel
+    setProjects(reorderedList);
+    setIsProjectsOrderDirty(true);
+  };
+
+  const handleSaveProjectsOrder = async () => {
+    try {
+      setUploading(true);
+      const updates = projects.map((proj, idx) => ({
+        id: proj.id,
+        title: proj.title,
+        slug: proj.slug,
+        category: proj.category,
+        tagline: proj.tagline,
+        image: proj.image,
+        program: proj.program,
+        industry: proj.industry,
+        stage: proj.stage,
+        about: proj.about,
+        media: proj.media || [],
+        subtitle: proj.subtitle || "",
+        cover_image_url: proj.cover_image_url || "",
+        summary_text: proj.summary_text || "",
+        full_text: proj.full_text || "",
+        position: idx
+      }));
+
+      const { error } = await supabase.from("portfolio_projects").upsert(updates);
+      if (error) throw error;
+
+      setIsProjectsOrderDirty(false);
+      setAlert({ type: "success", message: "Showcase portfolio order saved successfully." });
+    } catch (err: any) {
+      console.error("Failed to save projects order:", err);
+      setAlert({ type: "error", message: err.message || "Failed to save portfolio order." });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -853,7 +1019,7 @@ export default function AdminPage() {
       if (!isPlaceholder) {
         // Retrieve current DB entries first to check what was deleted
         const { data: currentDbImages } = await supabase
-          .from("showcase_images")
+          .from("hero_slideshow_images")
           .select("url_path");
 
         const newUrls = new Set(showcaseImages.map(img => img.url_path));
@@ -866,9 +1032,9 @@ export default function AdminPage() {
           await deleteStorageFileByUrl(url);
         }
 
-        // 1. Delete all current rows in showcase_images
+        // 1. Delete all current rows in hero_slideshow_images
         const { error: deleteError } = await supabase
-          .from("showcase_images")
+          .from("hero_slideshow_images")
           .delete()
           .neq("id", "00000000-0000-0000-0000-000000000000"); // Deletes all rows
 
@@ -882,7 +1048,7 @@ export default function AdminPage() {
 
         if (payload.length > 0) {
           const { error: insertError } = await supabase
-            .from("showcase_images")
+            .from("hero_slideshow_images")
             .insert(payload);
 
           if (insertError) throw insertError;
@@ -890,7 +1056,7 @@ export default function AdminPage() {
 
         // 3. Fetch fresh records from Supabase to load real IDs
         const { data: freshData, error: fetchError } = await supabase
-          .from("showcase_images")
+          .from("hero_slideshow_images")
           .select("*")
           .order("position", { ascending: true });
 
@@ -1035,14 +1201,14 @@ export default function AdminPage() {
     }
 
     if (uploadedUrl) {
-      setEditingProject(prev => prev ? { ...prev, image: uploadedUrl } : null);
+      setEditingProject(prev => prev ? { ...prev, image: uploadedUrl, cover_image_url: uploadedUrl } : null);
       setAlert({ type: "success", message: "Cover image uploaded successfully." });
       setProjectUploading(false);
     } else {
       // 2. Base64 database storage fallback (with client-side image compression)
       try {
         const base64String = await compressImage(file, 1200, 0.7);
-        setEditingProject(prev => prev ? { ...prev, image: base64String } : null);
+        setEditingProject(prev => prev ? { ...prev, image: base64String, cover_image_url: base64String } : null);
         setAlert({ type: "success", message: "Cover image compressed and saved locally." });
         setProjectUploading(false);
       } catch (err: any) {
@@ -1050,6 +1216,102 @@ export default function AdminPage() {
         setProjectUploading(false);
       }
     }
+  };
+
+  // Showcase Gallery upload files
+  const handleUploadShowcaseBlockFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setProjectUploading(true);
+    let successCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `portfolio-showcase/${fileName}`;
+
+      let uploadedUrl = "";
+
+      try {
+        const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+        if (!isPlaceholder) {
+          const { data, error } = await supabase.storage
+            .from("showcase")
+            .upload(filePath, file, {
+              cacheControl: "3600",
+              upsert: false
+            });
+
+          if (!error && data) {
+            const { data: publicUrlData } = supabase.storage
+              .from("showcase")
+              .getPublicUrl(filePath);
+
+            if (publicUrlData?.publicUrl) {
+              uploadedUrl = publicUrlData.publicUrl;
+            }
+          }
+        }
+      } catch (storageErr) {
+        console.warn("Showcase block storage upload threw exception, falling back to Base64:", storageErr);
+      }
+
+      if (!uploadedUrl) {
+        // Fallback to Base64 image compression
+        try {
+          uploadedUrl = await compressImage(file, 1200, 0.7);
+        } catch (base64Err) {
+          console.error("Compression fallback failed:", base64Err);
+        }
+      }
+
+      if (uploadedUrl) {
+        const newBlock = {
+          id: `temp-${Math.random().toString(36).substring(2)}-${Date.now()}`,
+          image_url: uploadedUrl,
+          block_type: "before", // default placement position: before the story
+          display_order: projectShowcaseImages.length + successCount + 1
+        };
+        setProjectShowcaseImages(prev => [...prev, newBlock]);
+        successCount++;
+      }
+    }
+
+    setProjectUploading(false);
+    if (successCount > 0) {
+      setAlert({ type: "success", message: `Successfully uploaded ${successCount} showcase image(s).` });
+    }
+  };
+
+  const handleUpdateBlockType = (idx: number, type: "before" | "after") => {
+    setProjectShowcaseImages(prev => prev.map((img, i) => i === idx ? { ...img, block_type: type } : img));
+  };
+
+  const moveBlockOrder = (idx: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= projectShowcaseImages.length) return;
+
+    setProjectShowcaseImages(prev => {
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+
+      // Reassign display_order indexes
+      return copy.map((block, index) => ({ ...block, display_order: index + 1 }));
+    });
+  };
+
+  const handleDeleteShowcaseBlock = async (idx: number) => {
+    const target = projectShowcaseImages[idx];
+    if (target.image_url && !target.image_url.startsWith("data:")) {
+      await deleteStorageFileByUrl(target.image_url);
+    }
+    setProjectShowcaseImages(prev => 
+      prev.filter((_, i) => i !== idx).map((block, index) => ({ ...block, display_order: index + 1 }))
+    );
   };
 
   // Render Login Gate Screen
@@ -1143,7 +1405,7 @@ export default function AdminPage() {
       
       {/* Absolute alert banner */}
       {alert && (
-        <div className={`fixed top-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-50 px-5 py-3.5 rounded-2xl border flex items-center gap-3 shadow-xl leading-normal break-words ${
+        <div className={`fixed top-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-[100] px-5 py-3.5 rounded-2xl border flex items-center gap-3 shadow-xl leading-normal break-words ${
           alert.type === "success" 
             ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
             : "bg-red-50 border-red-200 text-red-800"
@@ -1526,27 +1788,43 @@ export default function AdminPage() {
                   <h2 className="font-sans font-bold text-xl text-zinc-950">Showcase Portfolio</h2>
                   <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Add, edit, or remove project case studies</p>
                 </div>
-                <button
-                  onClick={() => {
-                    setEditingProject({
-                      title: "",
-                      slug: "",
-                      category: "BRAND DESIGN",
-                      tagline: "",
-                      image: "/images/grit1.jpg",
-                      program: "",
-                      industry: "",
-                      stage: "Established",
-                      about: "",
-                      media: []
-                    });
-                    setShowProjectModal(true);
-                  }}
-                  className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 self-start"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Project</span>
-                </button>
+                <div className="flex gap-2.5 items-center self-start">
+                  {isProjectsOrderDirty && (
+                    <button
+                      onClick={handleSaveProjectsOrder}
+                      className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white border border-zinc-200/50 rounded-full font-sans font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sm animate-pulse"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save Portfolio Order</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setEditingProject({
+                        title: "",
+                        slug: "",
+                        category: "BRAND DESIGN",
+                        tagline: "",
+                        image: "/images/grit1.jpg",
+                        program: "",
+                        industry: "",
+                        stage: "Established",
+                        about: "",
+                        media: [],
+                        subtitle: "",
+                        cover_image_url: "/images/grit1.jpg",
+                        summary_text: "",
+                        full_text: ""
+                      });
+                      setProjectShowcaseImages([]);
+                      setShowProjectModal(true);
+                    }}
+                    className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Project</span>
+                  </button>
+                </div>
               </div>
 
               {projects.length === 0 ? (
@@ -1559,7 +1837,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {projects.map((project) => (
+                  {projects.map((project, index) => (
                     <div
                       key={project.id}
                       className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
@@ -1586,18 +1864,32 @@ export default function AdminPage() {
                         </p>
                         <div className="flex items-center gap-3 mt-3 pt-2 border-t border-zinc-50 select-none">
                           <button
-                            onClick={() => {
-                              setEditingProject({
-                                ...project,
-                                media: typeof project.media === "string" ? project.media : JSON.stringify(project.media, null, 2)
-                              });
-                              setShowProjectModal(true);
-                            }}
+                            onClick={() => handleEditProjectClick(project)}
                             className="text-zinc-500 hover:text-zinc-950 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
                           >
                             <Edit className="w-3 h-3" />
                             <span>Edit</span>
                           </button>
+
+                          <div className="flex items-center gap-1 ml-1 pl-2 border-l border-zinc-100">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMoveProjectOrder(index, "up")}
+                              className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === projects.length - 1}
+                              onClick={() => handleMoveProjectOrder(index, "down")}
+                              className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
                           <button
                             onClick={() => handleDeleteProject(project.id)}
                             className="text-zinc-400 hover:text-red-600 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer ml-auto"
@@ -2100,7 +2392,10 @@ export default function AdminPage() {
               setEditingProject(null);
             }}
           />
-          <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col justify-between z-10 animate-slide-in overflow-y-auto">
+          <div 
+            data-lenis-prevent
+            className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col justify-between z-10 animate-slide-in overflow-y-auto"
+          >
             <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
               <h3 className="font-sans font-bold text-lg text-zinc-950">
                 {editingProject.id ? "Edit Case Study" : "Create Case Study"}
@@ -2126,7 +2421,19 @@ export default function AdminPage() {
                   required
                   placeholder="e.g. BOSE Sound"
                   value={editingProject.title}
-                  onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value })}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    const generatedSlug = newTitle
+                      .toLowerCase()
+                      .replace(/\s+/g, "-")
+                      .replace(/[^\w\-]+/g, "")
+                      .replace(/\-\-+/g, "-");
+                    setEditingProject({
+                      ...editingProject,
+                      title: newTitle,
+                      slug: generatedSlug
+                    });
+                  }}
                   className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                 />
               </div>
@@ -2245,44 +2552,128 @@ export default function AdminPage() {
 
               <div className="flex flex-col gap-1">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Tagline (Pitch summary)
+                  Subtitle (Tagline)
                 </label>
                 <input
                   type="text"
                   placeholder="Acoustic engineering met by pure..."
-                  value={editingProject.tagline}
-                  onChange={(e) => setEditingProject({ ...editingProject, tagline: e.target.value })}
+                  value={editingProject.subtitle || editingProject.tagline || ""}
+                  onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
                   className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  About Project Brief
+                  Summary Text (About Brief)
                 </label>
                 <textarea
                   rows={3}
                   placeholder="Founded to challenge how we perceive auditory clarity..."
-                  value={editingProject.about}
-                  onChange={(e) => setEditingProject({ ...editingProject, about: e.target.value })}
+                  value={editingProject.summary_text || editingProject.about || ""}
+                  onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
                   className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Showcase Media Blocks (JSON array)
+                  Full Case Study Story Text
                 </label>
                 <textarea
                   rows={4}
-                  placeholder='[{"type": "single", "images": [{"src": "/images/grit1.jpg", "aspect": "aspect-[16/10]"}]}]'
-                  value={editingProject.media}
-                  onChange={(e) => setEditingProject({ ...editingProject, media: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-mono outline-hidden text-zinc-950 resize-none leading-relaxed"
+                  placeholder="The complete detailed story text of this project case study..."
+                  value={editingProject.full_text || ""}
+                  onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
+                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
                 />
-                <span className="text-[10px] text-zinc-400 pl-0.5 mt-0.5 leading-normal select-none">
-                  Must be valid JSON array of single/double layout assets blocks.
-                </span>
+              </div>
+
+              {/* Showcase Images Manager */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
+                <div className="flex items-center justify-between select-none">
+                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                    Showcase Gallery Blocks
+                  </label>
+                  <div className="relative cursor-pointer">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleUploadShowcaseBlockFiles}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      disabled={projectUploading}
+                    />
+                    <button
+                      type="button"
+                      disabled={projectUploading}
+                      className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Images</span>
+                    </button>
+                  </div>
+                </div>
+
+                {projectShowcaseImages.length === 0 ? (
+                  <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
+                    <Upload className="w-6 h-6 text-zinc-200 mb-2" />
+                    <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
+                    <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    {projectShowcaseImages.map((img, idx) => (
+                      <div
+                        key={img.id || idx}
+                        className="flex items-center justify-between border border-zinc-100 bg-zinc-50/50 rounded-xl p-2.5 gap-3 shadow-2xs group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
+                            <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
+                            <select
+                              value={img.block_type || "before"}
+                              onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
+                              className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
+                            >
+                              <option value="before">Before the Story Text</option>
+                              <option value="after">After the Story Text</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 select-none shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => moveBlockOrder(idx, "up")}
+                            disabled={idx === 0}
+                            className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveBlockOrder(idx, "down")}
+                            disabled={idx === projectShowcaseImages.length - 1}
+                            className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteShowcaseBlock(idx)}
+                            className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

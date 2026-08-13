@@ -22,6 +22,7 @@ export default function ProjectPage({ params }: PageProps) {
   const router = useRouter();
 
   const [projectList, setProjectList] = useState<any[]>(PROJECTS);
+  const [showcaseBlocks, setShowcaseBlocks] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -33,6 +34,7 @@ export default function ProjectPage({ params }: PageProps) {
           const { data, error } = await supabase
             .from("portfolio_projects")
             .select("*")
+            .order("position", { ascending: true })
             .order("created_at", { ascending: false });
 
           if (!error && data && data.length > 0) {
@@ -49,6 +51,30 @@ export default function ProjectPage({ params }: PageProps) {
   // Find project matching the slug (stripping duplicate suffixes if routing from explore)
   const baseSlug = slug.replace(/-dup\d+$/, "");
   const project = projectList.find((p) => p.slug === baseSlug) || projectList[0] || PROJECTS[0];
+
+  useEffect(() => {
+    if (!project?.id) return;
+
+    const fetchShowcaseBlocks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("showcase_images")
+          .select("*")
+          .eq("project_id", project.id)
+          .order("display_order", { ascending: true });
+        if (!error && data) {
+          setShowcaseBlocks(data);
+        } else {
+          setShowcaseBlocks([]);
+        }
+      } catch (err) {
+        console.error("Failed to load project showcase blocks:", err);
+        setShowcaseBlocks([]);
+      }
+    };
+
+    fetchShowcaseBlocks();
+  }, [project?.id]);
 
   const pcScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -274,6 +300,59 @@ export default function ProjectPage({ params }: PageProps) {
     return () => ctx.revert();
   }, []);
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const beforeImages = showcaseBlocks.filter(
+    (img) =>
+      img.block_type === "before" ||
+      !img.block_type ||
+      img.block_type === "carousel" ||
+      img.block_type === "grid_2col" ||
+      img.block_type === "full_width"
+  );
+  const afterImages = showcaseBlocks.filter((img) => img.block_type === "after");
+
+  const renderImageTrack = (images: any[], trackingId: string) => {
+    if (images.length === 0) return null;
+    return (
+      <div className="w-full">
+        {/* Desktop horizontal track */}
+        <div className="w-full md:block hidden overflow-hidden">
+          <div
+            ref={pcScrollContainerRef}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+              isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+            }`}
+          >
+            {images.map((img: any, idx: number) => (
+              <img
+                key={`${trackingId}-pc-${idx}`}
+                src={img.image_url}
+                alt="Showcase item"
+                className="pc-media-card shrink-0 h-[500px] w-auto object-contain rounded-2xl md:rounded-3xl border border-zinc-200/50 bg-zinc-100 select-none"
+              />
+            ))}
+          </div>
+        </div>
+        {/* Mobile stacked view */}
+        <div className="w-full md:hidden flex flex-col gap-6 px-6">
+          {images.map((img: any, idx: number) => (
+            <img
+              key={`${trackingId}-mb-${idx}`}
+              src={img.image_url}
+              alt="Showcase mobile item"
+              className="w-full h-auto rounded-xl border border-zinc-200/50 bg-zinc-50 select-none"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Flatten media array to get all images for PC horizontal scroll
   const pcMediaItems = (project && Array.isArray(project.media)) 
     ? project.media.flatMap((block: any) => block.images || []) 
@@ -349,84 +428,63 @@ export default function ProjectPage({ params }: PageProps) {
             {project.title}
           </h1>
           <p className="font-sans font-normal text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl">
-            {project.tagline}
+            {project.subtitle || project.tagline}
           </p>
         </div>
       </div>
 
-      {/* PC Horizontal Scroll Gallery (Same Height, Dynamic Proportional Width) */}
-      <div className="w-full md:block hidden overflow-hidden pb-12">
-        <div
-          ref={pcScrollContainerRef}
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-            }`}
-        >
-          {pcMediaItems.map((media: any, idx: number) => (
+      {/* CASE STUDY CONTENTS (BEFORE STORY GALLERY TRACK) */}
+      {showcaseBlocks.length > 0 ? (
+        renderImageTrack(beforeImages, "before")
+      ) : (
+        /* OLD SYSTEM FALLBACK FOR SEEDED AND STATIC DATA */
+        <>
+          {/* PC Horizontal Scroll Gallery (Same Height, Dynamic Proportional Width) */}
+          <div className="w-full md:block hidden overflow-hidden pb-12">
             <div
-              key={`pc-media-${idx}`}
-              className={`pc-media-card shrink-0 relative h-[500px] ${media.aspect} rounded-2xl md:rounded-3xl overflow-hidden border border-zinc-200/50 bg-zinc-100 shadow-md select-none isolate translate-z-0`}
-              style={{
-                transform: "translate3d(0, 0, 0)",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
+              ref={pcScrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+                isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+              }`}
             >
-              <Image
-                src={media.src}
-                alt={`${project.title} gallery ${idx}`}
-                fill
-                sizes="(max-w-1024px) 100vw, 800px"
-                className="object-cover object-center select-none"
-                priority={idx < 2}
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-              />
+              {pcMediaItems.map((media: any, idx: number) => (
+                <div
+                  key={`pc-media-${idx}`}
+                  className={`pc-media-card shrink-0 relative h-[500px] ${media.aspect} rounded-2xl md:rounded-3xl overflow-hidden border border-zinc-200/50 bg-zinc-100 select-none isolate translate-z-0`}
+                  style={{
+                    transform: "translate3d(0, 0, 0)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
+                >
+                  <Image
+                    src={media.src}
+                    alt={`${project.title} gallery ${idx}`}
+                    fill
+                    sizes="(max-w-1024px) 100vw, 800px"
+                    className="object-cover object-center select-none"
+                    priority={idx < 2}
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Mobile Vertical Grid Gallery (Single or Double columns, Equal aspect ratios) */}
-      <div className="w-full md:hidden flex flex-col gap-4 px-6 pb-12">
-        {((project as any).media as any[] || []).map((block: any, bIdx: number) => {
-          if (block.type === "single") {
-            const media = block.images[0];
-            return (
-              <div
-                key={`mobile-block-${bIdx}`}
-                className="mobile-media-card w-full aspect-[4/3] relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-sm isolate translate-z-0"
-                style={{
-                  transform: "translate3d(0, 0, 0)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                }}
-              >
-                <Image
-                  src={media.src}
-                  alt={`${project.title} mobile ${bIdx}`}
-                  fill
-                  sizes="(max-w-768px) 100vw, 400px"
-                  className="object-cover object-center select-none"
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
-                />
-              </div>
-            );
-          } else {
-            // Double columns side-by-side with equal aspect-ratio (aspect-square)
-            return (
-              <div
-                key={`mobile-block-${bIdx}`}
-                className="w-full grid grid-cols-2 gap-4"
-              >
-                {(block.images as any[]).map((media: any, mIdx: number) => (
+          {/* Mobile Vertical Grid Gallery (Single or Double columns, Equal aspect ratios) */}
+          <div className="w-full md:hidden flex flex-col gap-4 px-6 pb-12">
+            {((project as any).media as any[] || []).map((block: any, bIdx: number) => {
+              if (block.type === "single") {
+                const media = block.images[0];
+                return (
                   <div
-                    key={`mobile-double-${bIdx}-${mIdx}`}
-                    className="mobile-media-card w-full aspect-square relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-sm isolate translate-z-0"
+                    key={`mobile-block-${bIdx}`}
+                    className="mobile-media-card w-full aspect-[4/3] relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 isolate translate-z-0"
                     style={{
                       transform: "translate3d(0, 0, 0)",
                       backfaceVisibility: "hidden",
@@ -435,20 +493,49 @@ export default function ProjectPage({ params }: PageProps) {
                   >
                     <Image
                       src={media.src}
-                      alt={`${project.title} mobile double ${bIdx}-${mIdx}`}
+                      alt={`${project.title} mobile ${bIdx}`}
                       fill
-                      sizes="(max-w-768px) 50vw, 200px"
+                      sizes="(max-w-768px) 100vw, 400px"
                       className="object-cover object-center select-none"
                       placeholder="blur"
                       blurDataURL={BLUR_DATA_URL}
                     />
                   </div>
-                ))}
-              </div>
-            );
-          }
-        })}
-      </div>
+                );
+              } else {
+                return (
+                  <div
+                    key={`mobile-block-${bIdx}`}
+                    className="w-full grid grid-cols-2 gap-4"
+                  >
+                    {(block.images as any[]).map((media: any, mIdx: number) => (
+                      <div
+                        key={`mobile-double-${bIdx}-${mIdx}`}
+                        className="mobile-media-card w-full aspect-square relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 isolate translate-z-0"
+                        style={{
+                          transform: "translate3d(0, 0, 0)",
+                          backfaceVisibility: "hidden",
+                          WebkitBackfaceVisibility: "hidden",
+                        }}
+                      >
+                        <Image
+                          src={media.src}
+                          alt={`${project.title} mobile double ${bIdx}-${mIdx}`}
+                          fill
+                          sizes="(max-w-768px) 50vw, 200px"
+                          className="object-cover object-center select-none"
+                          placeholder="blur"
+                          blurDataURL={BLUR_DATA_URL}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+            })}
+          </div>
+        </>
+      )}
 
       {/* Brand Story & Details Section */}
       <div
@@ -486,52 +573,48 @@ export default function ProjectPage({ params }: PageProps) {
         </div>
 
         {/* Right Column: Gilroy About description and button */}
-        <div className="w-full md:w-2/3 flex flex-col items-start gap-8">
+        <div className="w-full md:w-2/3 flex flex-col items-start gap-6">
           <p className="font-sans text-2xl sm:text-3xl md:text-[2.25rem] text-zinc-900 leading-relaxed font-normal">
-            {project.about}
+            {project.summary_text || project.about}
           </p>
 
-          <a
-            href="#"
-            className="group inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full border border-zinc-900 text-zinc-950 font-sans font-semibold text-xs hover:bg-zinc-900 hover:text-white transition-all duration-300"
-          >
-            <span>Read the full story</span>
-            <span className="inline-block transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300">
-              ↗
-            </span>
-          </a>
+          {project.full_text && (
+            <div 
+              className={`transition-all duration-700 ease-in-out overflow-hidden w-full ${
+                isExpanded ? "max-h-[1500px] opacity-100 mt-2" : "max-h-0 opacity-0"
+              }`}
+            >
+              <p className="font-sans text-base sm:text-lg text-zinc-500 leading-relaxed whitespace-pre-line">
+                {project.full_text}
+              </p>
+            </div>
+          )}
+
+          {project.full_text && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="group inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full border border-zinc-900 text-zinc-950 font-sans font-semibold text-xs hover:bg-zinc-900 hover:text-white transition-all duration-300 cursor-pointer"
+            >
+              <span>{isExpanded ? "Hide full story" : "Read the full story"}</span>
+              <span className={`inline-block transform transition-transform duration-300 ${
+                isExpanded ? "-rotate-90" : "group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              }`}>
+                {isExpanded ? "↑" : "↗"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* More Designs Row (2-column grid on PC and Mobile) */}
-      <div
-        ref={moreDesignsRef}
-        className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 pb-24 md:pb-36"
-      >
-        <div className="grid grid-cols-2 gap-4 md:gap-6">
-          {moreDesigns.map((src, idx) => (
-            <div
-              key={`more-design-${idx}`}
-              className="group relative w-full aspect-square md:aspect-[4/3] rounded-2xl md:rounded-3xl overflow-hidden border border-zinc-200/50 bg-zinc-100 shadow-md select-none isolate translate-z-0 transition-transform duration-500 ease-out hover:scale-[1.01]"
-              style={{
-                transform: "translate3d(0, 0, 0)",
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-              }}
-            >
-              <Image
-                src={src}
-                alt={`${project.title} extra design ${idx}`}
-                fill
-                sizes="(max-w-768px) 50vw, 600px"
-                className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-              />
-            </div>
-          ))}
+      {/* CASE STUDY CONTENTS (AFTER STORY GALLERY TRACK) */}
+      {showcaseBlocks.length > 0 && (
+        <div className="w-full pb-16 md:pb-24 select-none">
+          {renderImageTrack(afterImages, "after")}
         </div>
-      </div>
+      )}
+
+
 
       {/* Next Project Deck Selector Section */}
       <section

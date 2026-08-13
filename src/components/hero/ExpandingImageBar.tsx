@@ -30,7 +30,7 @@ export default function ExpandingImageBar() {
         const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
         if (!isPlaceholder) {
           const { data: imgData, error: imgError } = await supabase
-            .from("showcase_images")
+            .from("hero_slideshow_images")
             .select("url_path")
             .order("position", { ascending: true });
 
