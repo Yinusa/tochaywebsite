@@ -138,6 +138,26 @@ export default function AdminPage() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
+
+  // Persist admin panel navigation tabs across reloads to avoid UI layout reset confusion
+  useEffect(() => {
+    const savedTab = localStorage.getItem("tochay_admin_active_tab");
+    if (savedTab === "site" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings") {
+      setActiveTab(savedTab);
+    }
+    const savedSubTab = localStorage.getItem("tochay_admin_pricing_sub_tab");
+    if (savedSubTab === "packages" || savedSubTab === "services" || savedSubTab === "coupons") {
+      setPricingActiveSubTab(savedSubTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("tochay_admin_active_tab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem("tochay_admin_pricing_sub_tab", pricingActiveSubTab);
+  }, [pricingActiveSubTab]);
   const [showInclusionsModal, setShowInclusionsModal] = useState(false);
   
   const [inclusionsCardId, setInclusionsCardId] = useState<string | null>(null);
