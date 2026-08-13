@@ -14,7 +14,8 @@ import {
   PlusCircle, 
   Settings2,
   X,
-  Loader2
+  Loader2,
+  GripVertical
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -164,6 +165,28 @@ export default function FormBuilderTab() {
     );
   };
 
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIdx(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === index) return;
+
+    const list = [...formFields];
+    const draggedItem = list[draggedIdx];
+    list.splice(draggedIdx, 1);
+    list.splice(index, 0, draggedItem);
+    setDraggedIdx(index);
+    setFormFields(list);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+  };
+
   const moveField = (index: number, direction: "up" | "down") => {
     if (direction === "up" && index === 0) return;
     if (direction === "down" && index === formFields.length - 1) return;
@@ -235,7 +258,7 @@ export default function FormBuilderTab() {
 
   const handleCopyLink = (slug: string, id: string) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const url = `${origin}/f/${slug}`;
+    const url = `${origin}/form/${slug}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 3000);
@@ -534,7 +557,7 @@ export default function FormBuilderTab() {
                 <div className="flex flex-col gap-1.5">
                   <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">Custom URL Slug</label>
                   <div className="flex items-center bg-zinc-50 border border-zinc-200 focus-within:border-zinc-500 rounded-xl px-4 py-2.5">
-                    <span className="text-zinc-300 font-mono text-xs select-none pr-1">/f/</span>
+                    <span className="text-zinc-300 font-mono text-xs select-none pr-1">/form/</span>
                     <input
                       type="text"
                       required
@@ -583,10 +606,24 @@ export default function FormBuilderTab() {
                     </div>
                   ) : (
                     formFields.map((field, idx) => (
-                      <div key={field.id} className="border border-zinc-200 rounded-2xl p-4 flex flex-col gap-3 bg-zinc-50/20 relative group/field">
+                      <div 
+                        key={field.id} 
+                        draggable={true}
+                        onDragStart={() => handleDragStart(idx)}
+                        onDragOver={(e) => handleDragOver(e, idx)}
+                        onDragEnd={handleDragEnd}
+                        className={`border rounded-2xl p-4 flex flex-col gap-3 relative group/field transition-all duration-200 ${
+                          draggedIdx === idx 
+                            ? "opacity-40 border-dashed border-zinc-400 bg-zinc-100" 
+                            : "border-zinc-200 bg-zinc-50/20 hover:border-zinc-300"
+                        }`}
+                      >
                         {/* Upper Controls Row */}
                         <div className="flex items-center justify-between gap-3">
-                          <span className="font-sans font-bold text-xs text-zinc-400 select-none">#{idx + 1} Question</span>
+                          <div className="flex items-center gap-2 select-none cursor-grab active:cursor-grabbing">
+                            <GripVertical className="w-3.5 h-3.5 text-zinc-400" />
+                            <span className="font-sans font-bold text-xs text-zinc-400">#{idx + 1} Question</span>
+                          </div>
                           
                           {/* Reordering and deleting buttons */}
                           <div className="flex items-center gap-2 select-none">
@@ -595,23 +632,26 @@ export default function FormBuilderTab() {
                               disabled={idx === 0}
                               onClick={() => moveField(idx, "up")}
                               className="p-1 rounded-md text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 disabled:opacity-30 cursor-pointer"
+                              title="Move Up"
                             >
-                              <ArrowUp className="w-3 h-3" />
+                              <ArrowUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
                               disabled={idx === formFields.length - 1}
                               onClick={() => moveField(idx, "down")}
                               className="p-1 rounded-md text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 disabled:opacity-30 cursor-pointer"
+                              title="Move Down"
                             >
-                              <ArrowDown className="w-3 h-3" />
+                              <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleRemoveField(field.id)}
-                              className="p-1 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50/50 cursor-pointer"
+                              className="p-1 rounded-md text-zinc-450 hover:text-red-600 hover:bg-red-50/50 cursor-pointer"
+                              title="Remove Question"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>

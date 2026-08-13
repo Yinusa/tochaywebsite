@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import {
-  Upload,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  File,
+import { 
+  Upload, 
+  X, 
+  CheckCircle2, 
+  AlertCircle, 
+  File, 
   Loader2,
   FileCheck,
   ChevronRight,
@@ -376,11 +376,11 @@ export default function PublicFormPage() {
             <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-6">
               <CheckCircle2 className="w-8 h-8 text-emerald-600" />
             </div>
-
+            
             <h2 className="font-sans font-bold text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-none">
               Submission Received
             </h2>
-
+            
             <p className="font-sans font-normal text-zinc-500 text-sm mt-4 max-w-md leading-relaxed">
               {form.success_message || "Your workspace assets have been compiled and sent to our design studio successfully."}
             </p>
@@ -406,9 +406,6 @@ export default function PublicFormPage() {
 
             {/* Header Metadata */}
             <div className="flex flex-col gap-3 select-none">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-[#ffd230] font-bold">
-                Workspace Intake Portal
-              </span>
               <h1 className="font-sans font-bold text-4xl sm:text-5xl text-zinc-950 tracking-tight leading-none">
                 {form.title}
               </h1>
@@ -436,7 +433,7 @@ export default function PublicFormPage() {
                 <div key={field.id} className="flex flex-col gap-2.5">
 
                   {/* Label title */}
-                  <label className="font-sans font-semibold text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider pl-0.5 flex items-center select-none">
+                  <label className="font-sans font-semibold text-[10px] sm:text-xs text-zinc-950 uppercase tracking-wider pl-0.5 flex items-center select-none">
                     <span>{field.label}</span>
                     {field.required && <span className="text-[#ffd230] ml-1 font-bold">*</span>}
                   </label>
@@ -521,13 +518,13 @@ export default function PublicFormPage() {
                           className="hidden"
                           accept={field.allowedTypes?.join(",")}
                         />
-
+                        
                         {uploadingField === field.id ? (
                           /* UPLOADER PROCESS MODE */
                           <div className="flex flex-col items-center gap-3 w-full max-w-xs select-none">
                             <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
                             <span className="font-sans font-bold text-xs text-zinc-950">Uploading deliverables...</span>
-
+                            
                             {/* Progressive progress bar indicator */}
                             <div className="w-full bg-zinc-200 rounded-full h-1.5 overflow-hidden">
                               <div
@@ -567,7 +564,7 @@ export default function PublicFormPage() {
                                       <img src={file.publicUrl} alt={file.name} className="w-full h-full object-cover" />
                                     </div>
                                   ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 shrink-0 border border-zinc-100">
+                                    <div className="w-10 h-10 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 shrink-0 border border-zinc-100 select-none">
                                       <File className="w-5 h-5" />
                                     </div>
                                   )}
