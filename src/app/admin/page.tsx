@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import FormBuilderTab from "@/components/admin/FormBuilderTab";
 import { 
   Lock, 
   FolderKanban, 
@@ -23,6 +24,7 @@ import {
   Eye,
   ChevronUp,
   ChevronDown,
+  FileText,
   Upload,
   Loader2
 } from "lucide-react";
@@ -99,7 +101,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<"site" | "portfolio" | "pricing" | "inquiries" | "settings">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms">("site");
 
   // Database datasets state
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -142,8 +144,8 @@ export default function AdminPage() {
   // Persist admin panel navigation tabs across reloads to avoid UI layout reset confusion
   useEffect(() => {
     const savedTab = localStorage.getItem("tochay_admin_active_tab");
-    if (savedTab === "site" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings") {
-      setActiveTab(savedTab);
+    if (savedTab === "site" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings" || savedTab === "forms") {
+      setActiveTab(savedTab as any);
     }
     const savedSubTab = localStorage.getItem("tochay_admin_pricing_sub_tab");
     if (savedSubTab === "packages" || savedSubTab === "services" || savedSubTab === "coupons") {
@@ -440,6 +442,32 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this case study? This cannot be undone.")) return;
 
     try {
+      const project = projects.find(p => p.id === id);
+      if (project) {
+        // Delete cover image
+        if (project.image) {
+          await deleteStorageFileByUrl(project.image);
+        }
+
+        // Delete all gallery/layout images in media blocks
+        let mediaBlocks: any[] = [];
+        try {
+          mediaBlocks = typeof project.media === "string" ? JSON.parse(project.media) : project.media;
+        } catch (_) {}
+
+        if (Array.isArray(mediaBlocks)) {
+          for (const block of mediaBlocks) {
+            if (block.images && Array.isArray(block.images)) {
+              for (const img of block.images) {
+                if (img.src) {
+                  await deleteStorageFileByUrl(img.src);
+                }
+              }
+            }
+          }
+        }
+      }
+
       const { error } = await supabase.from("portfolio_projects").delete().eq("id", id);
       if (error) throw error;
 
@@ -719,6 +747,29 @@ export default function AdminPage() {
     }
   };
 
+  // Helper to extract bucket file path from public Supabase Storage URL
+  const getFilePathFromUrl = (url: string, bucketName = "showcase") => {
+    const marker = `/public/${bucketName}/`;
+    const index = url.indexOf(marker);
+    if (index !== -1) {
+      return decodeURIComponent(url.substring(index + marker.length));
+    }
+    return null;
+  };
+
+  // Helper to delete individual storage asset by URL
+  const deleteStorageFileByUrl = async (url: string, bucketName = "showcase") => {
+    if (!url || url.startsWith("data:")) return;
+    const filePath = getFilePathFromUrl(url, bucketName);
+    if (filePath) {
+      try {
+        await supabase.storage.from(bucketName).remove([filePath]);
+      } catch (err) {
+        console.warn("Storage asset cleanup warning:", err);
+      }
+    }
+  };
+
   // Mutators: Add Showcase image (LOCAL STATE ONLY)
   const handleAddShowcaseImage = (url: string, position: number) => {
     const tempId = `temp-${Math.random().toString(36).substring(2)}-${Date.now()}`;
@@ -800,6 +851,21 @@ export default function AdminPage() {
     try {
       const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
       if (!isPlaceholder) {
+        // Retrieve current DB entries first to check what was deleted
+        const { data: currentDbImages } = await supabase
+          .from("showcase_images")
+          .select("url_path");
+
+        const newUrls = new Set(showcaseImages.map(img => img.url_path));
+        const urlsToDelete = (currentDbImages || [])
+          .map(img => img.url_path)
+          .filter(url => !newUrls.has(url));
+
+        // Clean up from storage
+        for (const url of urlsToDelete) {
+          await deleteStorageFileByUrl(url);
+        }
+
         // 1. Delete all current rows in showcase_images
         const { error: deleteError } = await supabase
           .from("showcase_images")
@@ -1177,6 +1243,18 @@ export default function AdminPage() {
                 {inquiries.length}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("forms")}
+            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+              activeTab === "forms"
+                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
+                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
+            }`}
+          >
+            <FileText className="w-4 h-4 shrink-0" />
+            <span>Custom Forms</span>
           </button>
 
           <button
@@ -1889,6 +1967,11 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* TAB 4b: CUSTOM FORMS */}
+          {activeTab === "forms" && (
+            <FormBuilderTab />
           )}
 
           {/* TAB 4: SETTINGS */}

@@ -193,6 +193,19 @@ To store raw portfolio cover images and home page slideshow elements, the applic
 - **Cause**: The storage upload failed (typically `403 Forbidden` due to missing RLS storage policies). The app fell back to converting images to Base64 data-URIs to write them directly into the table. To avoid exceeding the browser's `LocalStorage` 5MB quota limit, the app scales Base64 fallbacks down to `1200px` width at `0.7` quality.
 - **Resolution**: Apply the SQL statements listed in `6.1` to define the RLS storage policies. Once configured, uploads will succeed directly to the Supabase cloud bucket in full, raw quality without compression.
 
+### 6.3 Automatic Storage Assets Deletion Policy (Storage Optimization)
+To prevent orphaned files from accumulating and consuming your Supabase Storage quota, the workspace enforces an **automatic storage cleanup policy**. Deleting data entries or configurations immediately removes their associated files from the storage bucket:
+
+1. **Slideshow Images Manager**:
+   - Saving your hero slideshow settings automatically identifies any slideshow image URLs removed from the local state list and deletes the corresponding file from the `showcase/hero/` folder.
+2. **Portfolio Case Studies**:
+   - Deleting a project case study automatically reads its `image` (cover) and parses its `media` JSON blocks to delete all associated layout and gallery images from the `showcase/portfolio/` folder.
+3. **Custom Forms**:
+   - Deleting a form template automatically queries all its associated responses, parses their uploaded files, and deletes the files in a batch from the `showcase/form-uploads/` folder before deleting the database row.
+4. **Form Submissions**:
+   - Deleting an individual client response row fetches its file deliverables metadata and deletes those files from the storage bucket to free up space immediately.
+
+
 
 
 
