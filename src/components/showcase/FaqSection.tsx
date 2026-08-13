@@ -163,7 +163,7 @@ export default function FaqSection() {
                   }}
                   className="transition-[height] duration-500 ease-in-out overflow-hidden"
                 >
-                  <div className="pl-12 sm:pl-16 pb-6 pr-6 font-sans font-light text-zinc-500 text-sm sm:text-base leading-relaxed">
+                  <div className="pl-12 sm:pl-16 pb-6 pr-6 font-sans font-normal text-zinc-500 text-sm sm:text-base leading-relaxed">
                     {item.answer}
                   </div>
                 </div>

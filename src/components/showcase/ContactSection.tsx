@@ -108,7 +108,7 @@ export default function ContactSection() {
           <h3 className="font-sans font-bold text-4xl sm:text-5xl md:text-6xl text-white tracking-tight leading-[1.05] max-w-md">
             Let's collaborate.
           </h3>
-          <p className="font-sans font-light text-zinc-400 text-sm sm:text-base leading-relaxed max-w-sm mb-6 mt-2">
+          <p className="font-sans font-normal text-zinc-400 text-sm sm:text-base leading-relaxed max-w-sm mb-6 mt-2">
             Got an idea, a project, or want to discuss a partnership? Fill out the form or write to us directly.
           </p>
           <a
@@ -127,7 +127,7 @@ export default function ContactSection() {
               <span className="font-sans font-bold text-white text-xl tracking-tight">
                 Message Sent Successfully
               </span>
-              <p className="font-sans font-light text-zinc-400 text-sm sm:text-base leading-relaxed">
+              <p className="font-sans font-normal text-zinc-400 text-sm sm:text-base leading-relaxed">
                 Thank you, <strong className="text-white font-medium">{name}</strong>. We have received your message and will reach out to you at <strong className="text-white font-medium">{email}</strong> shortly.
               </p>
               <button

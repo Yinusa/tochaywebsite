@@ -11,7 +11,7 @@ export default function BrandIntro() {
         {/* Left Column: Tiny text, button, metadata. Stacks below headline on mobile, floats left on desktop. */}
         <div className="md:col-span-5 flex flex-col justify-between gap-8 md:min-h-[16rem] order-2 md:order-1">
           <div className="space-y-6">
-            <p className="font-sans font-light text-zinc-500 text-xs sm:text-sm md:text-base max-w-sm leading-relaxed tracking-tight">
+            <p className="font-sans font-normal text-zinc-500 text-xs sm:text-sm md:text-base max-w-sm leading-relaxed tracking-tight">
               Independent designer specializing in custom logo marks, scalable visual systems, and polished graphics. I build brands for scale-ups, aligning positioning with aesthetics to drive clarity and revenue.
             </p>
             <div>

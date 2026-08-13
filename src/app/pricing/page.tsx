@@ -538,7 +538,7 @@ export default function PricingPage() {
         <h1 className="font-sans font-bold text-4xl sm:text-6xl md:text-7xl lg:text-[4.5rem] tracking-tight leading-[1.05] text-[#09090b]">
           pricing & packages.
         </h1>
-        <p className="font-sans font-light text-zinc-500 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed mt-2">
+        <p className="font-sans font-normal text-zinc-500 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed mt-2">
           Select individual rate cards, monthly assets retainers, or complete brand systems. Compile custom scopes and download your invoice directly.
         </p>
       </div>
@@ -584,12 +584,12 @@ export default function PricingPage() {
                       <span className="font-sans font-semibold text-sm text-zinc-950">
                         {item.name}
                       </span>
-                      <span className="font-sans font-light text-zinc-400 text-[10px] max-w-[240px] line-clamp-1 leading-normal">
+                      <span className="font-sans font-normal text-zinc-400 text-[10px] max-w-[240px] line-clamp-1 leading-normal">
                         {item.description || "Curated package suite deliverables."}
                       </span>
                       <span className="font-sans font-bold text-xs text-zinc-950 mt-1 block">
                         ₦{Number(item.price).toLocaleString()}
-                        {item.type === "card" && item.category === "asset" && <span className="font-light text-zinc-400 text-[9px] lowercase"> /mo</span>}
+                        {item.type === "card" && item.category === "asset" && <span className="font-normal text-zinc-400 text-[9px] lowercase"> /mo</span>}
                       </span>
                     </div>
 
@@ -685,7 +685,7 @@ export default function PricingPage() {
                       </span>
                     </div>
                     
-                    <p className="font-sans font-light text-zinc-500 text-xs mt-1 leading-normal select-none">
+                    <p className="font-sans font-normal text-zinc-500 text-xs mt-1 leading-normal select-none">
                       Complete identity systems package.
                     </p>
                   </div>
@@ -703,7 +703,7 @@ export default function PricingPage() {
                         <div key={i} className="flex items-start gap-2.5">
                           <Check className="w-3.5 h-3.5 text-[#ffd230] shrink-0 mt-0.5" />
                           <span
-                            className={`font-sans font-light text-xs leading-normal ${
+                            className={`font-sans font-normal text-xs leading-normal ${
                               isFeatured ? "text-zinc-400" : "text-zinc-600"
                             }`}
                           >
@@ -788,10 +788,10 @@ export default function PricingPage() {
                       >
                         ₦{Number(card.price).toLocaleString()}
                       </span>
-                      <span className="font-sans font-light text-zinc-400 text-xs">/month</span>
+                      <span className="font-sans font-normal text-zinc-400 text-xs">/month</span>
                     </div>
                     
-                    <p className="font-sans font-light text-zinc-500 text-xs mt-1 leading-normal select-none">
+                    <p className="font-sans font-normal text-zinc-500 text-xs mt-1 leading-normal select-none">
                       Flexible monthly assets retainer.
                     </p>
                   </div>
@@ -809,7 +809,7 @@ export default function PricingPage() {
                         <div key={i} className="flex items-start gap-2.5">
                           <Check className="w-3.5 h-3.5 text-[#ffd230] shrink-0 mt-0.5" />
                           <span
-                            className={`font-sans font-light text-xs leading-normal ${
+                            className={`font-sans font-normal text-xs leading-normal ${
                               isFeatured ? "text-zinc-400" : "text-zinc-600"
                             }`}
                           >
@@ -866,12 +866,12 @@ export default function PricingPage() {
                     <h4 className="font-sans font-bold text-base text-zinc-950 tracking-tight leading-snug">
                       {service.name}
                     </h4>
-                    <p className="font-sans font-light text-zinc-400 text-xs leading-relaxed max-w-xs">
+                    <p className="font-sans font-normal text-zinc-400 text-xs leading-relaxed max-w-xs">
                       {service.description}
                     </p>
                     <span className="font-sans font-extrabold text-sm text-zinc-950 mt-1 block">
                       ₦{Number(service.price).toLocaleString()}
-                      {service.name === "Decks" && <span className="font-light text-zinc-400 text-[10px] lowercase"> / slide</span>}
+                      {service.name === "Decks" && <span className="font-normal text-zinc-400 text-[10px] lowercase"> / slide</span>}
                     </span>
                   </div>
 
@@ -960,7 +960,7 @@ export default function PricingPage() {
             <div className="flex flex-col items-center justify-center py-20 text-center select-none flex-grow">
               <FileText className="w-12 h-12 text-zinc-200 mb-3" />
               <span className="font-sans font-bold text-zinc-400 text-sm">Scope is Empty</span>
-              <p className="font-sans font-light text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
+              <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
                 Add deliverables or packages from the directory to compile your custom estimate.
               </p>
             </div>
@@ -973,9 +973,9 @@ export default function PricingPage() {
                       <span className="font-sans font-semibold text-sm text-zinc-950 tracking-tight leading-tight">
                         {item.name}
                       </span>
-                      <span className="font-sans font-light text-zinc-400 text-xs block mt-0.5">
+                      <span className="font-sans font-normal text-zinc-400 text-xs block mt-0.5">
                         N{item.price.toLocaleString()}
-                        {item.name === "Decks" && <span className="font-light text-zinc-400 text-[10px] lowercase"> / slide</span>}
+                        {item.name === "Decks" && <span className="font-normal text-zinc-400 text-[10px] lowercase"> / slide</span>}
                       </span>
                     </div>
 
@@ -1158,7 +1158,7 @@ export default function PricingPage() {
             <h3 className="font-sans font-bold text-xl text-[#09090b] mb-2 select-none">
               Client Details
             </h3>
-            <p className="font-sans font-light text-zinc-400 text-xs leading-normal mb-6 select-none">
+            <p className="font-sans font-normal text-zinc-400 text-xs leading-normal mb-6 select-none">
               Input the Client or Organization name. This metadata will compile directly into the PDF invoice brand header.
             </p>
 

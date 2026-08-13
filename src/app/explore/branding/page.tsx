@@ -216,7 +216,7 @@ export default function BrandingExplorePage() {
                 <span className="font-sans font-bold text-white text-base sm:text-lg tracking-tight leading-none group-hover:text-zinc-300 transition-colors duration-300">
                   {project.title}
                 </span>
-                <span className="font-sans font-light text-zinc-400 text-xs sm:text-sm tracking-tight leading-tight">
+                <span className="font-sans font-normal text-zinc-400 text-xs sm:text-sm tracking-tight leading-tight">
                   {project.program}
                 </span>
               </div>

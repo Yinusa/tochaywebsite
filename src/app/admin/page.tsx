@@ -1016,7 +1016,7 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-col">
               <span className="font-sans font-bold text-sm text-zinc-950">Security Gate</span>
-              <span className="font-sans font-light text-zinc-400 text-xs">Verify credentials to enter dashboard</span>
+              <span className="font-sans font-normal text-zinc-400 text-xs">Verify credentials to enter dashboard</span>
             </div>
           </div>
 
@@ -1202,7 +1202,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-5 pb-6 border-b border-zinc-100">
                 <div className="select-none">
                   <h2 className="font-sans font-bold text-xl text-zinc-950">Landing Slideshow Switch Speed</h2>
-                  <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">
                     Configure the time interval (in milliseconds) before the landing page images automatically rotate.
                   </p>
                 </div>
@@ -1233,7 +1233,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-6">
                 <div className="select-none">
                   <h2 className="font-sans font-bold text-xl text-zinc-950">Hero Slideshow Images</h2>
-                  <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">
                     Manage the custom design images rendered in the expanding hero bar.
                   </p>
                 </div>
@@ -1318,7 +1318,7 @@ export default function AdminPage() {
                   <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                   <div className="flex flex-col gap-1">
                     <span className="font-sans font-bold text-xs text-amber-900 select-none">Recommended Specs</span>
-                    <p className="font-sans font-light text-amber-800 text-[11px] leading-relaxed">
+                    <p className="font-sans font-normal text-amber-800 text-[11px] leading-relaxed">
                       For best aesthetics on retina displays, upload images with an aspect ratio of <strong>16:10</strong> or <strong>16:9</strong> (e.g. 1920x1200 or 1920x1080 resolution). Ensure the files are optimized in WebP format for fast initial page load.
                     </p>
                   </div>
@@ -1358,7 +1358,7 @@ export default function AdminPage() {
                                   ? `Offline Asset (${Math.round((img.url_path.length * 3) / 4 / 1024)} KB)` 
                                   : img.url_path.split("/").pop()}
                               </span>
-                              <span className="font-sans font-light text-zinc-400 text-[10px]">
+                              <span className="font-sans font-normal text-zinc-400 text-[10px]">
                                 Position Order: {img.position}
                               </span>
                             </div>
@@ -1386,7 +1386,7 @@ export default function AdminPage() {
                             </div>
 
                             <div className="flex items-center gap-1.5">
-                              <label className="font-sans font-light text-[10px] text-zinc-400">Order:</label>
+                              <label className="font-sans font-normal text-[10px] text-zinc-400">Order:</label>
                               <input
                                 type="number"
                                 defaultValue={img.position}
@@ -1413,7 +1413,7 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between flex-wrap gap-4 bg-zinc-50 border border-zinc-200 rounded-2xl p-5">
                     <div className="flex flex-col">
                       <span className="font-sans font-bold text-xs text-zinc-950">Save Slideshow Customizations</span>
-                      <p className="font-sans font-light text-[10px] text-zinc-400">
+                      <p className="font-sans font-normal text-[10px] text-zinc-400">
                         Commit all added, deleted, and reordered slides to the active website.
                       </p>
                     </div>
@@ -1446,7 +1446,7 @@ export default function AdminPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none pb-4 border-b border-zinc-100">
                 <div className="flex flex-col">
                   <h2 className="font-sans font-bold text-xl text-zinc-950">Showcase Portfolio</h2>
-                  <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">Add, edit, or remove project case studies</p>
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Add, edit, or remove project case studies</p>
                 </div>
                 <button
                   onClick={() => {
@@ -1475,7 +1475,7 @@ export default function AdminPage() {
                 <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
                   <FolderKanban className="w-10 h-10 text-zinc-200 mb-3" />
                   <span className="font-sans font-bold text-zinc-400 text-sm">No Projects in Database</span>
-                  <p className="font-sans font-light text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
+                  <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
                     Seeded projects might still be loading, or your portfolio_projects table is currently empty.
                   </p>
                 </div>
@@ -1503,7 +1503,7 @@ export default function AdminPage() {
                         <h4 className="font-sans font-bold text-sm text-zinc-950 tracking-tight leading-snug">
                           {project.title}
                         </h4>
-                        <p className="font-sans font-light text-zinc-400 text-[11px] line-clamp-1 max-w-[200px]">
+                        <p className="font-sans font-normal text-zinc-400 text-[11px] line-clamp-1 max-w-[200px]">
                           {project.tagline}
                         </p>
                         <div className="flex items-center gap-3 mt-3 pt-2 border-t border-zinc-50 select-none">
@@ -1626,14 +1626,14 @@ export default function AdminPage() {
                               </h3>
                               <span className="font-sans font-extrabold text-lg text-zinc-950 mt-1 block">
                                 ₦{Number(card.price).toLocaleString()}
-                                {card.category === "asset" && <span className="font-light text-zinc-400 text-xs">/mo</span>}
+                                {card.category === "asset" && <span className="font-normal text-zinc-400 text-xs">/mo</span>}
                               </span>
                               
                               {/* Inclusions summary list */}
                               <div className="mt-3 bg-zinc-50/50 border border-zinc-150 rounded-xl p-3 flex flex-col gap-2">
                                 <span className="font-sans font-bold text-[9px] text-zinc-400 uppercase tracking-wider">Suite Inclusions:</span>
                                 {inclusions.length === 0 ? (
-                                  <span className="font-sans font-light text-[10px] text-zinc-400 italic">No inclusions mapped. Configure items below.</span>
+                                  <span className="font-sans font-normal text-[10px] text-zinc-400 italic">No inclusions mapped. Configure items below.</span>
                                 ) : (
                                   <ul className="flex flex-col gap-1.5">
                                     {inclusions.map((item) => {
@@ -1700,7 +1700,7 @@ export default function AdminPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none pb-4 border-b border-zinc-100">
                     <div className="flex flex-col">
                       <h2 className="font-sans font-bold text-xl text-zinc-950">One-Off Services</h2>
-                      <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">Manage stand-alone creative assets and base catalog item rates</p>
+                      <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Manage stand-alone creative assets and base catalog item rates</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1728,12 +1728,12 @@ export default function AdminPage() {
                           <h4 className="font-sans font-bold text-base text-zinc-950 tracking-tight leading-snug">
                             {service.name}
                           </h4>
-                          <p className="font-sans font-light text-zinc-400 text-xs leading-relaxed max-w-lg">
+                          <p className="font-sans font-normal text-zinc-400 text-xs leading-relaxed max-w-lg">
                             {service.description || "No description provided."}
                           </p>
                           <span className="font-sans font-extrabold text-sm text-zinc-950 mt-1 block">
                             ₦{Number(service.price).toLocaleString()}
-                            {service.name === "Decks" && <span className="font-light text-zinc-400 text-[10px] lowercase"> / slide</span>}
+                            {service.name === "Decks" && <span className="font-normal text-zinc-400 text-[10px] lowercase"> / slide</span>}
                           </span>
                         </div>
 
@@ -1768,7 +1768,7 @@ export default function AdminPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none pb-4 border-b border-zinc-100">
                     <div className="flex flex-col">
                       <h2 className="font-sans font-bold text-xl text-zinc-950">Promo Discount Coupons</h2>
-                      <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">Manage coupons and active codes campaign rates</p>
+                      <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Manage coupons and active codes campaign rates</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1849,14 +1849,14 @@ export default function AdminPage() {
             <div className="flex flex-col gap-6">
               <div className="pb-4 border-b border-zinc-100 select-none">
                 <h2 className="font-sans font-bold text-xl text-zinc-950">Contact Inquiries</h2>
-                <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">Read feedback submitted on the home screen collaboration form</p>
+                <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Read feedback submitted on the home screen collaboration form</p>
               </div>
 
               {inquiries.length === 0 ? (
                 <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
                   <Mail className="w-10 h-10 text-zinc-200 mb-3" />
                   <span className="font-sans font-bold text-zinc-400 text-sm">No Inquiries Found</span>
-                  <p className="font-sans font-light text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
+                  <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
                     Form submissions from visitors will appear here automatically.
                   </p>
                 </div>
@@ -1881,7 +1881,7 @@ export default function AdminPage() {
                           {new Date(inq.created_at).toLocaleString()}
                         </span>
                       </div>
-                      <p className="font-sans font-light text-zinc-600 text-xs leading-relaxed max-w-2xl mt-1">
+                      <p className="font-sans font-normal text-zinc-600 text-xs leading-relaxed max-w-2xl mt-1">
                         {inq.message}
                       </p>
                     </div>
@@ -1898,7 +1898,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-5">
                 <div className="pb-4 border-b border-zinc-100 select-none">
                   <h2 className="font-sans font-bold text-xl text-zinc-950">Metadata & Bank Settings</h2>
-                  <p className="font-sans font-light text-zinc-400 text-xs mt-0.5">Edit contact details and Zenith bank transfer rules drawn on invoices</p>
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Edit contact details and Zenith bank transfer rules drawn on invoices</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1976,7 +1976,7 @@ export default function AdminPage() {
                       rows={3}
                       value={bankSettings.legal_footer}
                       onChange={(e) => setBankSettings({ ...bankSettings, legal_footer: e.target.value })}
-                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-light outline-hidden transition-all text-zinc-950 resize-none"
+                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden transition-all text-zinc-950 resize-none"
                     />
                   </div>
                 </div>
@@ -2001,7 +2001,7 @@ export default function AdminPage() {
           <span className="font-sans font-bold text-xs text-zinc-400">
             TY STUDIO WORKSPACE © {new Date().getFullYear()}
           </span>
-          <span className="font-sans font-light text-[10px] text-zinc-400">
+          <span className="font-sans font-normal text-[10px] text-zinc-400">
             Engineered with Supabase + Next.js Server Client
           </span>
         </div>
@@ -2182,7 +2182,7 @@ export default function AdminPage() {
                   placeholder="Founded to challenge how we perceive auditory clarity..."
                   value={editingProject.about}
                   onChange={(e) => setEditingProject({ ...editingProject, about: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-light outline-hidden text-zinc-950 resize-none"
+                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
                 />
               </div>
 
@@ -2380,7 +2380,7 @@ export default function AdminPage() {
                         return (
                           <div key={item.id} className="border border-zinc-200 rounded-xl p-4 flex flex-col gap-3 bg-zinc-50/30">
                             <div className="flex items-center justify-between select-none">
-                              <span className="font-sans font-bold text-xs text-zinc-950">{baseName} <span className="font-light text-zinc-400">(Base: ₦{basePrice.toLocaleString()})</span></span>
+                              <span className="font-sans font-bold text-xs text-zinc-950">{baseName} <span className="font-normal text-zinc-400">(Base: ₦{basePrice.toLocaleString()})</span></span>
                               <button
                                 onClick={() => handleRemoveInclusion(item.id)}
                                 className="text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
@@ -2663,7 +2663,7 @@ export default function AdminPage() {
                   placeholder="Slide presentation featuring custom data visualization..."
                   value={editingService.description || ""}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-light outline-hidden text-zinc-950 resize-none"
+                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
                 />
               </div>
 

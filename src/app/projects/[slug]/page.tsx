@@ -348,7 +348,7 @@ export default function ProjectPage({ params }: PageProps) {
           <h1 className="font-sans font-bold text-4xl sm:text-6xl md:text-7xl lg:text-[4.5rem] tracking-tight leading-[1.05] text-zinc-950">
             {project.title}
           </h1>
-          <p className="font-sans font-light text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl">
+          <p className="font-sans font-normal text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl">
             {project.tagline}
           </p>
         </div>
@@ -487,7 +487,7 @@ export default function ProjectPage({ params }: PageProps) {
 
         {/* Right Column: Gilroy About description and button */}
         <div className="w-full md:w-2/3 flex flex-col items-start gap-8">
-          <p className="font-sans text-2xl sm:text-3xl md:text-[2.25rem] text-zinc-900 leading-relaxed font-light">
+          <p className="font-sans text-2xl sm:text-3xl md:text-[2.25rem] text-zinc-900 leading-relaxed font-normal">
             {project.about}
           </p>
 
@@ -547,7 +547,7 @@ export default function ProjectPage({ params }: PageProps) {
             </h2>
           </div>
           <div className="w-full md:w-1/2 md:max-w-md pt-2 md:pt-4">
-            <p className="font-sans font-light text-sm sm:text-base text-zinc-400 leading-relaxed">
+            <p className="font-sans font-normal text-sm sm:text-base text-zinc-400 leading-relaxed">
               Explore the next case study.
             </p>
           </div>

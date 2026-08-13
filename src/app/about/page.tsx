@@ -144,7 +144,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
             {/* Story Description (Left Side) */}
             <div className="md:col-span-7">
-              <p className="font-sans font-light text-zinc-500 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed tracking-tight">
+              <p className="font-sans font-normal text-zinc-500 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed tracking-tight">
                 I’m a 25-year-old brand designer and logo architect with over 6 years of professional experience shaping visual identities for scale-ups. Outside design, I maintain a strong interest in technology and the arts—a combination that influences my clean, logical, yet highly expressive design systems.
               </p>
             </div>

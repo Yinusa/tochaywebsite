@@ -137,7 +137,7 @@ export default function Capabilities() {
                     {item.name}
                   </span>
                   <span
-                    className={`font-sans font-light text-sm sm:text-base transition-colors duration-500 ${
+                    className={`font-sans font-normal text-sm sm:text-base transition-colors duration-500 ${
                       isHovered
                         ? "text-zinc-400"
                         : isDimmed
