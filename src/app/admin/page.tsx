@@ -1324,9 +1324,8 @@ export default function AdminPage() {
   // Render Login Gate Screen
   if (!isAuthenticated) {
     return (
-      <main className="relative min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans">
-        {/* Dynamic decorative backdrop grids */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 select-none pointer-events-none" />
+      <main className="relative min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans tochay-admin tochay-admin-login">
+
 
         {/* Brand Label */}
         <div className="flex flex-col items-center gap-3 select-none mb-8 z-10">
@@ -1408,7 +1407,7 @@ export default function AdminPage() {
 
   // Render Dashboard Workspace
   return (
-    <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans relative">
+    <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans relative tochay-admin tochay-admin-grid">
       
       {/* Absolute alert banner */}
       {alert && (
@@ -2595,7 +2594,7 @@ export default function AdminPage() {
 
       {/* PORTFOLIO PROJECT SLIDE OVER DIALOG MODAL */}
       {showProjectModal && editingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 select-none">
           <div 
             className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
             onClick={() => {
@@ -2605,9 +2604,9 @@ export default function AdminPage() {
           />
           <div 
             data-lenis-prevent
-            className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col justify-between z-10 animate-slide-in overflow-y-auto"
+            className="relative w-full max-w-5xl bg-[#f8f8f7] h-[90vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in overflow-hidden border border-zinc-200/50"
           >
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
+            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
               <h3 className="font-sans font-bold text-lg text-zinc-950">
                 {editingProject.id 
                   ? (editingProject.is_case_study ? "Edit Case Study" : "Edit Project")
@@ -2624,308 +2623,326 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="p-6 flex-grow flex flex-col gap-4 overflow-y-auto">
-              <div className="flex flex-col gap-1">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Project Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. BOSE Sound"
-                  value={editingProject.title}
-                  onChange={(e) => {
-                    const newTitle = e.target.value;
-                    const generatedSlug = newTitle
-                      .toLowerCase()
-                      .replace(/\s+/g, "-")
-                      .replace(/[^\w\-]+/g, "")
-                      .replace(/\-\-+/g, "-");
-                    setEditingProject({
-                      ...editingProject,
-                      title: newTitle,
-                      slug: generatedSlug
-                    });
-                  }}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Unique Slug (URL Router)
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. bose-sound"
-                  value={editingProject.slug}
-                  onChange={(e) => setEditingProject({ ...editingProject, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                    Category Tag
-                  </label>
-                  <select
-                    value={editingProject.category}
-                    onChange={(e) => setEditingProject({ ...editingProject, category: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  >
-                    <option value="BRAND DESIGN">BRAND DESIGN</option>
-                    <option value="BRAND SYSTEM">BRAND SYSTEM</option>
-                    <option value="PACKAGING">PACKAGING</option>
-                    <option value="MOTION">MOTION</option>
-                    <option value="IDENTITY">IDENTITY</option>
-                    <option value="ART DIRECTION">ART DIRECTION</option>
-                    <option value="VISUAL SYSTEM">VISUAL SYSTEM</option>
-                    <option value="GRAPHIC DESIGN">GRAPHIC DESIGN</option>
-                    <option value="PRODUCT DESIGN">PRODUCT DESIGN</option>
-                    <option value="UI/UX">UI/UX</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                    Industry Domain
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Consumer Tech"
-                    value={editingProject.industry}
-                    onChange={(e) => setEditingProject({ ...editingProject, industry: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                    Program Scope
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Design System, Code"
-                    value={editingProject.program}
-                    onChange={(e) => setEditingProject({ ...editingProject, program: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                    Stage
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Established"
-                    value={editingProject.stage}
-                    onChange={(e) => setEditingProject({ ...editingProject, stage: e.target.value })}
-                    className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Cover Image Path / Upload
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. /images/grit1.jpg"
-                    value={editingProject.image}
-                    onChange={(e) => setEditingProject({ ...editingProject, image: e.target.value })}
-                    className="flex-grow bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  />
-                  <div className="relative shrink-0 select-none">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={uploadProjectCoverFile}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      disabled={projectUploading}
-                    />
-                    <button
-                      type="button"
-                      disabled={projectUploading}
-                      className="px-4 py-2.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                    >
-                      {projectUploading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Upload className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature Settings Toggles */}
-              <div className="grid grid-cols-2 gap-4 border border-zinc-200 bg-zinc-50/50 rounded-2xl p-4 my-2 select-none">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editingProject.has_details}
-                    onChange={(e) => setEditingProject({ ...editingProject, has_details: e.target.checked })}
-                    className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Enable Details Page</span>
-                    <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Allows click to view designs</span>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editingProject.is_case_study}
-                    onChange={(e) => setEditingProject({ ...editingProject, is_case_study: e.target.checked })}
-                    className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Show in Case Studies</span>
-                    <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Features in homepage Case Studies swiper</span>
-                  </div>
-                </label>
-              </div>
-
-              {editingProject.has_details && (
-                <>
+            <div className="p-6 md:p-8 flex-grow overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+                
+                {/* Column 1: Core Details */}
+                <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                      Subtitle (Tagline)
+                      Project Title
                     </label>
                     <input
                       type="text"
-                      placeholder="Acoustic engineering met by pure..."
-                      value={editingProject.subtitle || editingProject.tagline || ""}
-                      onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
-                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      required
+                      placeholder="e.g. BOSE Sound"
+                      value={editingProject.title}
+                      onChange={(e) => {
+                        const newTitle = e.target.value;
+                        const generatedSlug = newTitle
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^\w\-]+/g, "")
+                          .replace(/\-\-+/g, "-");
+                        setEditingProject({
+                          ...editingProject,
+                          title: newTitle,
+                          slug: generatedSlug
+                        });
+                      }}
+                      className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                      Summary Text (About Brief)
+                      Unique Slug (URL Router)
                     </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Founded to challenge how we perceive auditory clarity..."
-                      value={editingProject.summary_text || editingProject.about || ""}
-                      onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
-                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. bose-sound"
+                      value={editingProject.slug}
+                      onChange={(e) => setEditingProject({ ...editingProject, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+                      className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                      Full Case Study Story Text
-                    </label>
-                    <textarea
-                      rows={4}
-                      placeholder="The complete detailed story text of this project case study..."
-                      value={editingProject.full_text || ""}
-                      onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
-                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Showcase Images Manager */}
-                  <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
-                    <div className="flex items-center justify-between select-none">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
                       <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                        Showcase Gallery Blocks
+                        Category Tag
                       </label>
-                      <div className="relative cursor-pointer">
+                      <select
+                        value={editingProject.category}
+                        onChange={(e) => setEditingProject({ ...editingProject, category: e.target.value })}
+                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      >
+                        <option value="BRAND DESIGN">BRAND DESIGN</option>
+                        <option value="BRAND SYSTEM">BRAND SYSTEM</option>
+                        <option value="PACKAGING">PACKAGING</option>
+                        <option value="MOTION">MOTION</option>
+                        <option value="IDENTITY">IDENTITY</option>
+                        <option value="ART DIRECTION">ART DIRECTION</option>
+                        <option value="VISUAL SYSTEM">VISUAL SYSTEM</option>
+                        <option value="GRAPHIC DESIGN">GRAPHIC DESIGN</option>
+                        <option value="PRODUCT DESIGN">PRODUCT DESIGN</option>
+                        <option value="UI/UX">UI/UX</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                        Industry Domain
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Consumer Tech"
+                        value={editingProject.industry}
+                        onChange={(e) => setEditingProject({ ...editingProject, industry: e.target.value })}
+                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                        Program Scope
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Design System, Code"
+                        value={editingProject.program}
+                        onChange={(e) => setEditingProject({ ...editingProject, program: e.target.value })}
+                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                        Stage
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Established"
+                        value={editingProject.stage}
+                        onChange={(e) => setEditingProject({ ...editingProject, stage: e.target.value })}
+                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                      Cover Image Path / Upload
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. /images/grit1.jpg"
+                        value={editingProject.image}
+                        onChange={(e) => setEditingProject({ ...editingProject, image: e.target.value })}
+                        className="flex-grow bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                      />
+                      <div className="relative shrink-0 select-none">
                         <input
                           type="file"
-                          multiple
                           accept="image/*"
-                          onChange={handleUploadShowcaseBlockFiles}
+                          onChange={uploadProjectCoverFile}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           disabled={projectUploading}
                         />
                         <button
                           type="button"
                           disabled={projectUploading}
-                          className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                          className="px-4 py-2.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Images</span>
+                          {projectUploading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </div>
-
-                    {projectShowcaseImages.length === 0 ? (
-                      <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
-                        <Upload className="w-6 h-6 text-zinc-200 mb-2" />
-                        <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
-                        <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-1">
-                        {projectShowcaseImages.map((img, idx) => (
-                          <div
-                            key={img.id || idx}
-                            className="flex items-center justify-between border border-zinc-100 bg-zinc-50/50 rounded-xl p-2.5 gap-3 shadow-2xs group"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
-                                <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
-                                <select
-                                  value={img.block_type || "before"}
-                                  onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
-                                  className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
-                                >
-                                  <option value="before">Before the Story Text</option>
-                                  <option value="after">After the Story Text</option>
-                                </select>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 select-none shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => moveBlockOrder(idx, "up")}
-                                disabled={idx === 0}
-                                className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
-                              >
-                                <ArrowUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveBlockOrder(idx, "down")}
-                                disabled={idx === projectShowcaseImages.length - 1}
-                                className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteShowcaseBlock(idx)}
-                                className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                </>
-              )}
+
+                  {/* Feature Settings Toggles */}
+                  <div className="grid grid-cols-2 gap-4 border border-zinc-200 bg-white/40 rounded-2xl p-4 my-2 select-none">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!editingProject.has_details}
+                        onChange={(e) => setEditingProject({ ...editingProject, has_details: e.target.checked })}
+                        className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Enable Details Page</span>
+                        <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Allows click to view designs</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!editingProject.is_case_study}
+                        onChange={(e) => setEditingProject({ ...editingProject, is_case_study: e.target.checked })}
+                        className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Show in Case Studies</span>
+                        <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Features in homepage Case Studies swiper</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Column 2: Narrative Details */}
+                <div className="flex flex-col gap-4">
+                  {editingProject.has_details ? (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                          Subtitle (Tagline)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Acoustic engineering met by pure..."
+                          value={editingProject.subtitle || editingProject.tagline || ""}
+                          onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
+                          className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                          Summary Text (About Brief)
+                        </label>
+                        <textarea
+                          rows={3}
+                          placeholder="Founded to challenge how we perceive auditory clarity..."
+                          value={editingProject.summary_text || editingProject.about || ""}
+                          onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
+                          className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                          Full Case Study Story Text
+                        </label>
+                        <textarea
+                          rows={4}
+                          placeholder="The complete detailed story text of this project case study..."
+                          value={editingProject.full_text || ""}
+                          onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
+                          className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Showcase Images Manager */}
+                      <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
+                        <div className="flex items-center justify-between select-none">
+                          <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                            Showcase Gallery Blocks
+                          </label>
+                          <div className="relative cursor-pointer">
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={handleUploadShowcaseBlockFiles}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              disabled={projectUploading}
+                            />
+                            <button
+                              type="button"
+                              disabled={projectUploading}
+                              className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Images</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {projectShowcaseImages.length === 0 ? (
+                          <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-white/40">
+                            <Upload className="w-6 h-6 text-zinc-200 mb-2" />
+                            <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
+                            <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1">
+                            {projectShowcaseImages.map((img, idx) => (
+                              <div
+                                key={img.id || idx}
+                                className="flex items-center justify-between border border-zinc-100 bg-white/40 rounded-xl p-2.5 gap-3 shadow-2xs group"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
+                                    <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
+                                    <select
+                                      value={img.block_type || "before"}
+                                      onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
+                                      className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
+                                    >
+                                      <option value="before">Before the Story Text</option>
+                                      <option value="after">After the Story Text</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 select-none shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveBlockOrder(idx, "up")}
+                                    disabled={idx === 0}
+                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                                  >
+                                    <ArrowUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveBlockOrder(idx, "down")}
+                                    disabled={idx === projectShowcaseImages.length - 1}
+                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                                  >
+                                    <ArrowDown className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteShowcaseBlock(idx)}
+                                    className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-zinc-200 rounded-2xl bg-white/40 h-full min-h-[350px] select-none">
+                      <FileText className="w-8 h-8 text-zinc-350 mb-2" />
+                      <span className="font-sans font-bold text-zinc-400 text-xs">Narrative Details Disabled</span>
+                      <p className="font-sans text-[10px] text-zinc-400 max-w-xs mt-1 leading-normal">
+                        Toggle "Enable Details Page" on the left column to configure subtitles, case study story text, and gallery images.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </div>
 
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
+            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none bg-white/50 backdrop-blur-md">
               <button
                 onClick={() => {
                   setShowProjectModal(false);

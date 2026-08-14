@@ -151,3 +151,182 @@ html.lenis body {
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
 }
+
+/* ==========================================
+   PREMIUM LIGHT MODERN ADMIN DASHBOARD STYLES
+   ========================================== */
+.tochay-admin {
+  background-color: #f8f8f7 !important;
+  color: #09090b !important;
+}
+
+/* Subtle graphic backdrop pattern */
+.tochay-admin-grid {
+  position: relative;
+}
+
+/* Header bar styling */
+.tochay-admin header {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(228, 228, 231, 0.6) !important;
+  z-index: 10;
+}
+
+/* Sidebar navigation buttons */
+.tochay-admin aside button.bg-white {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  border-color: rgba(228, 228, 231, 0.6) !important;
+  color: #71717a !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tochay-admin aside button.bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(161, 161, 170, 0.4) !important;
+  color: #09090b !important;
+  transform: translateY(-1px);
+}
+
+.tochay-admin aside button.bg-zinc-950 {
+  background-color: #09090b !important;
+  border-color: #09090b !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Central Workspace Tab Body Card */
+.tochay-admin section.bg-white {
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: 0 10px 35px -10px rgba(9, 9, 11, 0.04) !important;
+  z-index: 10;
+}
+
+/* Input Fields overrides */
+.tochay-admin select,
+.tochay-admin input[type="text"],
+.tochay-admin input[type="email"],
+.tochay-admin input[type="password"],
+.tochay-admin input[type="number"],
+.tochay-admin textarea {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(228, 228, 231, 0.8) !important;
+  color: #09090b !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.tochay-admin select:focus,
+.tochay-admin input:focus,
+.tochay-admin textarea:focus {
+  border-color: #09090b !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 1px #09090b !important;
+}
+
+/* Inner block containers (Image upload boxes, positions managers) */
+.tochay-admin section.bg-white .bg-zinc-50\/50,
+.tochay-admin section.bg-white .bg-zinc-50 {
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(228, 228, 231, 0.6) !important;
+}
+
+/* Table rendering */
+.tochay-admin table th {
+  background-color: rgba(244, 244, 245, 0.6) !important;
+  border-bottom: 1px solid rgba(228, 228, 231, 0.8) !important;
+  color: #71717a !important;
+}
+
+.tochay-admin table td {
+  border-bottom: 1px solid rgba(244, 244, 245, 0.8) !important;
+}
+
+.tochay-admin table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Project card items inside case study grids */
+.tochay-admin .border-zinc-200.rounded-2xl {
+  background-color: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(228, 228, 231, 0.6) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tochay-admin .border-zinc-200.rounded-2xl:hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(9, 9, 11, 0.08) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -8px rgba(9, 9, 11, 0.06) !important;
+}
+
+/* Login Gate layout */
+.tochay-admin-login {
+  background-color: #f8f8f7 !important;
+  position: relative;
+}
+
+.tochay-admin-login .bg-white\/70 {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  box-shadow: 0 30px 60px -15px rgba(9, 9, 11, 0.08) !important;
+  border-radius: 32px !important;
+}
+
+.tochay-admin-login input {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Slide-over custom drawers */
+.tochay-admin .bg-white.h-full {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-left: 1px solid rgba(228, 228, 231, 0.8) !important;
+}
+
+.tochay-admin .bg-white.h-full input,
+.tochay-admin .bg-white.h-full textarea,
+.tochay-admin .bg-white.h-full select {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Action button scales */
+.tochay-admin button.bg-zinc-950 {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tochay-admin button.bg-zinc-950:hover {
+  background-color: #ffd230 !important;
+  color: #09090b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(9, 9, 11, 0.1) !important;
+}
+
+.tochay-admin button.bg-white.border-zinc-200 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(228, 228, 231, 0.8) !important;
+  color: #27272a !important;
+}
+
+.tochay-admin button.bg-white.border-zinc-200:hover {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #09090b !important;
+}
+
+/* Footer overrides */
+.tochay-admin footer.bg-white {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  border-top: 1px solid rgba(228, 228, 231, 0.6) !important;
+}

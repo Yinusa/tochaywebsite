@@ -128,7 +128,7 @@ export default function FormBuilderTab() {
       id: "field-" + Date.now(),
       label: "New Question Label",
       type: "text",
-      placeholder: "",
+      placeholder: "Type here...",
       required: false
     };
     setFormFields([...formFields, newField]);
@@ -703,7 +703,7 @@ export default function FormBuilderTab() {
                             <label className="font-sans text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5">Placeholder Guide</label>
                             <input
                               type="text"
-                              placeholder="e.g. Type your company tagline here..."
+                              placeholder="Type here..."
                               value={field.placeholder || ""}
                               onChange={(e) => handleFieldChange(field.id, { placeholder: e.target.value })}
                               className="w-full bg-white border border-zinc-200 focus:border-zinc-500 rounded-lg p-2 text-xs font-sans font-normal text-zinc-950"
