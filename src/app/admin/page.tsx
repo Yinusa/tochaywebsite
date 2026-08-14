@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import FormBuilderTab from "@/components/admin/FormBuilderTab";
+import PresentationsTab from "@/components/admin/PresentationsTab";
 import { 
   Lock, 
   FolderKanban, 
@@ -29,7 +31,8 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
-  BookOpen
+  BookOpen,
+  Share2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -103,6 +106,7 @@ interface CardServiceItem {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState("");
@@ -111,7 +115,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms" | "presentations">("site");
   const [portfolioSubTab, setPortfolioSubTab] = useState<"branding" | "graphic" | "product">("branding");
 
   // Database datasets state
@@ -1548,6 +1552,18 @@ export default function AdminPage() {
             <Settings className="w-4 h-4 shrink-0" />
             <span>Settings & Coupons</span>
           </button>
+
+          <button
+            onClick={() => handleTabChange("presentations")}
+            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+              activeTab === "presentations"
+                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
+                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
+            }`}
+          >
+            <Share2 className="w-4 h-4 shrink-0" />
+            <span>Client Decks</span>
+          </button>
         </aside>
 
         {/* Central Workspace Tab Body */}
@@ -2474,6 +2490,11 @@ export default function AdminPage() {
           {/* TAB 4b: CUSTOM FORMS */}
           {activeTab === "forms" && (
             <FormBuilderTab />
+          )}
+
+          {/* TAB 4c: CLIENT PRESENTATION DECKS */}
+          {activeTab === "presentations" && (
+            <PresentationsTab />
           )}
 
           {/* TAB 4: SETTINGS */}
