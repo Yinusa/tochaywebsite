@@ -109,6 +109,7 @@ export default function AdminPage() {
   const router = useRouter();
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -211,15 +212,21 @@ export default function AdminPage() {
   // Check existing Supabase auth session
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data?.session) {
-        setIsAuthenticated(true);
-      } else {
-        // Look up local storage fallback session
-        const localSession = localStorage.getItem("tochay_admin_bypass");
-        if (localSession === "active") {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
           setIsAuthenticated(true);
+        } else {
+          // Look up local storage fallback session
+          const localSession = localStorage.getItem("tochay_admin_bypass");
+          if (localSession === "active") {
+            setIsAuthenticated(true);
+          }
         }
+      } catch (err) {
+        console.warn("Auth session check error:", err);
+      } finally {
+        setIsAuthChecking(false);
       }
     };
     checkSession();
@@ -1308,6 +1315,22 @@ export default function AdminPage() {
       prev.filter((_, i) => i !== idx).map((block, index) => ({ ...block, display_order: index + 1 }))
     );
   };
+
+  // Render loading state while checking session
+  if (isAuthChecking) {
+    return (
+      <main className="w-full min-h-screen bg-[#f8f8f7] flex items-center justify-center select-none animate-pulse">
+        <Image
+          src="/images/toflogoblack.png"
+          alt="Loading..."
+          width={38}
+          height={38}
+          className="w-auto h-9 object-contain"
+          priority
+        />
+      </main>
+    );
+  }
 
   // Render Login Gate Screen
   if (!isAuthenticated) {

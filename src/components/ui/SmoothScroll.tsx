@@ -12,6 +12,15 @@ interface SmoothScrollProps {
 export default function SmoothScroll({ children }: SmoothScrollProps) {
   const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
+  const prevPathnameRef = useRef<string | null>(null);
+
+  // Track SPA history pathnames
+  useEffect(() => {
+    if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
+      sessionStorage.setItem("tochay_prev_pathname", prevPathnameRef.current);
+    }
+    prevPathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     // Initialize Lenis smooth scroll engine
@@ -66,9 +75,13 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       ScrollTrigger.refresh();
     };
 
-    // Run with a tiny timeout to ensure DOM hydration has completed
-    const t = setTimeout(handleScrollReset, 50);
-    return () => clearTimeout(t);
+    // Run with a double-pass timeout to compensate for React layout hydration and height shifts
+    const t1 = setTimeout(handleScrollReset, 50);
+    const t2 = setTimeout(handleScrollReset, 250);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [pathname]);
 
   return <div className="smooth-scroll-wrapper">{children}</div>;

@@ -211,17 +211,13 @@ export default function ProjectPage({ params }: PageProps) {
 
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (typeof window !== "undefined" && document.referrer) {
-      try {
-        const refUrl = new URL(document.referrer);
-        if (refUrl.origin === window.location.origin) {
-          if (refUrl.pathname.startsWith("/explore/") || refUrl.pathname === "/") {
-            router.push(refUrl.pathname + refUrl.hash);
-            return;
-          }
+    if (typeof window !== "undefined") {
+      const prevPath = sessionStorage.getItem("tochay_prev_pathname");
+      if (prevPath) {
+        if (prevPath.startsWith("/explore/") || prevPath === "/") {
+          router.push(prevPath === "/" ? "/#case-studies-section" : prevPath);
+          return;
         }
-      } catch (err) {
-        console.warn("Referrer parsing fallback active:", err);
       }
     }
     
