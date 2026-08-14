@@ -28,7 +28,8 @@ import {
   Upload,
   Loader2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  BookOpen
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -49,6 +50,8 @@ interface ProjectItem {
   summary_text?: string;
   full_text?: string;
   position?: number;
+  has_details?: boolean;
+  is_case_study?: boolean;
 }
 
 interface ServiceItem {
@@ -108,7 +111,8 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<"site" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms">("site");
+  const [portfolioSubTab, setPortfolioSubTab] = useState<"branding" | "graphic" | "product">("branding");
 
   // Database datasets state
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -122,6 +126,8 @@ export default function AdminPage() {
   const [newImagePosition, setNewImagePosition] = useState<number>(1);
   const [uploading, setUploading] = useState(false);
   const [projectUploading, setProjectUploading] = useState(false);
+  const [projectShowcaseImages, setProjectShowcaseImages] = useState<any[]>([]);
+  const [isProjectsOrderDirty, setIsProjectsOrderDirty] = useState(false);
   const [bankSettings, setBankSettings] = useState({
     id: "",
     bank_name: "",
@@ -139,8 +145,6 @@ export default function AdminPage() {
   // Editor states
   const [pricingActiveSubTab, setPricingActiveSubTab] = useState<"packages" | "services" | "coupons">("packages");
   const [editingProject, setEditingProject] = useState<Partial<ProjectItem> | null>(null);
-  const [projectShowcaseImages, setProjectShowcaseImages] = useState<any[]>([]);
-  const [isProjectsOrderDirty, setIsProjectsOrderDirty] = useState(false);
   const [editingService, setEditingService] = useState<Partial<ServiceItem> | null>(null);
   const [editingCard, setEditingCard] = useState<Partial<CardItem> | null>(null);
   const [editingCoupon, setEditingCoupon] = useState<Partial<CouponItem> | null>(null);
@@ -155,7 +159,7 @@ export default function AdminPage() {
   // Persist admin panel navigation tabs across reloads to avoid UI layout reset confusion
   useEffect(() => {
     const savedTab = localStorage.getItem("tochay_admin_active_tab");
-    if (savedTab === "site" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings" || savedTab === "forms") {
+    if (savedTab === "site" || savedTab === "case_studies" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings" || savedTab === "forms") {
       setActiveTab(savedTab as any);
     }
     const savedSubTab = localStorage.getItem("tochay_admin_pricing_sub_tab");
@@ -165,11 +169,10 @@ export default function AdminPage() {
     isMounted.current = true;
   }, []);
 
-  useEffect(() => {
-    if (isMounted.current) {
-      localStorage.setItem("tochay_admin_active_tab", activeTab);
-    }
-  }, [activeTab]);
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    localStorage.setItem("tochay_admin_active_tab", tab);
+  };
 
   useEffect(() => {
     if (isMounted.current) {
@@ -408,6 +411,8 @@ export default function AdminPage() {
       cover_image_url: project.cover_image_url || project.image || "",
       summary_text: project.summary_text || project.about || "",
       full_text: project.full_text || "",
+      has_details: project.has_details ?? true,
+      is_case_study: project.is_case_study ?? true,
       media: typeof project.media === "string" ? project.media : JSON.stringify(project.media, null, 2)
     });
 
@@ -472,7 +477,9 @@ export default function AdminPage() {
         cover_image_url: editingProject.cover_image_url || editingProject.image || "/images/grit1.jpg",
         summary_text: editingProject.summary_text || editingProject.about || "",
         full_text: editingProject.full_text || "",
-        position: editingProject.id ? (editingProject.position ?? 0) : projects.length
+        position: editingProject.id ? (editingProject.position ?? 0) : projects.length,
+        has_details: editingProject.has_details ?? true,
+        is_case_study: editingProject.is_case_study ?? true
       };
 
       let projectId = editingProject.id;
@@ -1453,7 +1460,7 @@ export default function AdminPage() {
         {/* Navigation Sidebar */}
         <aside className="w-full md:w-64 flex flex-row md:flex-col gap-2 shrink-0 select-none overflow-x-auto pb-4 md:pb-0 scrollbar-none">
           <button
-            onClick={() => setActiveTab("site")}
+            onClick={() => handleTabChange("site")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "site"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1463,9 +1470,21 @@ export default function AdminPage() {
             <Eye className="w-4 h-4 shrink-0" />
             <span>Site Controls</span>
           </button>
-
+ 
           <button
-            onClick={() => setActiveTab("portfolio")}
+            onClick={() => handleTabChange("case_studies")}
+            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+              activeTab === "case_studies"
+                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
+                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
+            }`}
+          >
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span>Case Studies</span>
+          </button>
+ 
+          <button
+            onClick={() => handleTabChange("portfolio")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "portfolio"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1473,11 +1492,11 @@ export default function AdminPage() {
             }`}
           >
             <FolderKanban className="w-4 h-4 shrink-0" />
-            <span>Showcase Portfolio</span>
+            <span>Portfolio</span>
           </button>
-
+ 
           <button
-            onClick={() => setActiveTab("pricing")}
+            onClick={() => handleTabChange("pricing")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "pricing"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1487,9 +1506,9 @@ export default function AdminPage() {
             <Tag className="w-4 h-4 shrink-0" />
             <span>Rates & Pricing</span>
           </button>
-
+ 
           <button
-            onClick={() => setActiveTab("inquiries")}
+            onClick={() => handleTabChange("inquiries")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "inquiries"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1506,9 +1525,9 @@ export default function AdminPage() {
               </span>
             )}
           </button>
-
+ 
           <button
-            onClick={() => setActiveTab("forms")}
+            onClick={() => handleTabChange("forms")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "forms"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1518,9 +1537,9 @@ export default function AdminPage() {
             <FileText className="w-4 h-4 shrink-0" />
             <span>Custom Forms</span>
           </button>
-
+ 
           <button
-            onClick={() => setActiveTab("settings")}
+            onClick={() => handleTabChange("settings")}
             className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
               activeTab === "settings"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
@@ -1780,13 +1799,13 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* TAB 1: SHOWCASE PORTFOLIO */}
-          {activeTab === "portfolio" && (
+          {/* TAB 1: SHOWCAS          {/* TAB 1: CASE STUDIES */}
+          {activeTab === "case_studies" && (
             <div className="flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none pb-4 border-b border-zinc-100">
                 <div className="flex flex-col">
-                  <h2 className="font-sans font-bold text-xl text-zinc-950">Showcase Portfolio</h2>
-                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Add, edit, or remove project case studies</p>
+                  <h2 className="font-sans font-bold text-xl text-zinc-950">Case Studies Showcase</h2>
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Feature project case studies on the home page slider</p>
                 </div>
                 <div className="flex gap-2.5 items-center self-start">
                   {isProjectsOrderDirty && (
@@ -1814,7 +1833,146 @@ export default function AdminPage() {
                         subtitle: "",
                         cover_image_url: "/images/grit1.jpg",
                         summary_text: "",
-                        full_text: ""
+                        full_text: "",
+                        has_details: true,
+                        is_case_study: true
+                      });
+                      setProjectShowcaseImages([]);
+                      setShowProjectModal(true);
+                    }}
+                    className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Case Study</span>
+                  </button>
+                </div>
+              </div>
+
+              {projects.filter(p => p.is_case_study).length === 0 ? (
+                <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
+                  <FolderKanban className="w-10 h-10 text-zinc-200 mb-3" />
+                  <span className="font-sans font-bold text-zinc-400 text-sm">No Case Studies in Database</span>
+                  <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
+                    Create a case study or toggle 'Show in Case Studies' on a project to feature it.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {projects
+                    .map((project, index) => ({ project, index }))
+                    .filter(({ project }) => project.is_case_study)
+                    .map(({ project, index }) => (
+                      <div
+                        key={project.id}
+                        className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
+                      >
+                        <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0 select-none">
+                          <img
+                            src={project.image}
+                            alt={project.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200";
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-0.5 flex-grow">
+                          <span className="font-mono text-[8px] uppercase tracking-wider text-[#ffd230] font-semibold">
+                            {project.category}
+                          </span>
+                          <h4 className="font-sans font-bold text-sm text-zinc-950 tracking-tight leading-snug">
+                            {project.title}
+                          </h4>
+                          <p className="font-sans font-normal text-zinc-400 text-[11px] line-clamp-1 max-w-[200px]">
+                            {project.tagline}
+                          </p>
+                          <div className="flex items-center gap-3 mt-3 pt-2 border-t border-zinc-50 select-none">
+                            <button
+                              onClick={() => handleEditProjectClick(project)}
+                              className="text-zinc-500 hover:text-zinc-950 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+
+                            <div className="flex items-center gap-1 ml-1 pl-2 border-l border-zinc-100">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveProjectOrder(index, "up")}
+                                className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === projects.length - 1}
+                                onClick={() => handleMoveProjectOrder(index, "down")}
+                                className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="text-zinc-400 hover:text-red-600 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer ml-auto"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: PORTFOLIO DESIGN ASSETS */}
+          {activeTab === "portfolio" && (
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none pb-4 border-b border-zinc-100">
+                <div className="flex flex-col">
+                  <h2 className="font-sans font-bold text-xl text-zinc-950">Portfolio Design Assets</h2>
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Manage standalone designs and category assets</p>
+                </div>
+                <div className="flex gap-2.5 items-center self-start">
+                  {isProjectsOrderDirty && (
+                    <button
+                      onClick={handleSaveProjectsOrder}
+                      className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white border border-zinc-200/50 rounded-full font-sans font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sm animate-pulse"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save Portfolio Order</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const defCategory =
+                        portfolioSubTab === "branding"
+                          ? "BRAND DESIGN"
+                          : portfolioSubTab === "graphic"
+                          ? "GRAPHIC DESIGN"
+                          : "PRODUCT DESIGN";
+                      setEditingProject({
+                        title: "",
+                        slug: "",
+                        category: defCategory,
+                        tagline: "",
+                        image: "/images/grit1.jpg",
+                        program: "",
+                        industry: "",
+                        stage: "Established",
+                        about: "",
+                        media: [],
+                        subtitle: "",
+                        cover_image_url: "/images/grit1.jpg",
+                        summary_text: "",
+                        full_text: "",
+                        has_details: false,
+                        is_case_study: false
                       });
                       setProjectShowcaseImages([]);
                       setShowProjectModal(true);
@@ -1827,80 +1985,133 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {projects.length === 0 ? (
-                <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
+              {/* Sub-Tabs Nav Bar */}
+              <div className="flex border-b border-zinc-100 select-none -mt-2">
+                <button
+                  onClick={() => setPortfolioSubTab("branding")}
+                  className={`px-5 py-2.5 font-sans font-bold text-xs tracking-tight border-b-2 transition-all cursor-pointer ${
+                    portfolioSubTab === "branding"
+                      ? "border-zinc-950 text-zinc-950"
+                      : "border-transparent text-zinc-400 hover:text-zinc-700"
+                  }`}
+                >
+                  Branding
+                </button>
+                <button
+                  onClick={() => setPortfolioSubTab("graphic")}
+                  className={`px-5 py-2.5 font-sans font-bold text-xs tracking-tight border-b-2 transition-all cursor-pointer ${
+                    portfolioSubTab === "graphic"
+                      ? "border-zinc-950 text-zinc-950"
+                      : "border-transparent text-zinc-400 hover:text-zinc-700"
+                  }`}
+                >
+                  Graphic Design
+                </button>
+                <button
+                  onClick={() => setPortfolioSubTab("product")}
+                  className={`px-5 py-2.5 font-sans font-bold text-xs tracking-tight border-b-2 transition-all cursor-pointer ${
+                    portfolioSubTab === "product"
+                      ? "border-zinc-950 text-zinc-950"
+                      : "border-transparent text-zinc-400 hover:text-zinc-700"
+                  }`}
+                >
+                  Product Design
+                </button>
+              </div>
+
+              {projects.filter(p => {
+                if (portfolioSubTab === "branding") {
+                  return p.category === "BRAND DESIGN" || p.category === "BRAND SYSTEM" || p.category === "IDENTITY" || p.category === "VISUAL SYSTEM";
+                } else if (portfolioSubTab === "graphic") {
+                  return p.category === "GRAPHIC DESIGN" || p.category === "PACKAGING" || p.category === "ART DIRECTION" || p.category === "MOTION";
+                } else {
+                  return p.category === "PRODUCT DESIGN" || p.category === "UI/UX";
+                }
+              }).length === 0 ? (
+                <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none bg-zinc-50/20">
                   <FolderKanban className="w-10 h-10 text-zinc-200 mb-3" />
-                  <span className="font-sans font-bold text-zinc-400 text-sm">No Projects in Database</span>
+                  <span className="font-sans font-bold text-zinc-400 text-sm">No Projects in this category</span>
                   <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
-                    Seeded projects might still be loading, or your portfolio_projects table is currently empty.
+                    Click 'Create Project' to add visual design cards to this category.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {projects.map((project, index) => (
-                    <div
-                      key={project.id}
-                      className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
-                    >
-                      <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0 select-none">
-                        <img
-                          src={project.image}
-                          alt={project.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200";
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-0.5 flex-grow">
-                        <span className="font-mono text-[8px] uppercase tracking-wider text-[#ffd230] font-semibold">
-                          {project.category}
-                        </span>
-                        <h4 className="font-sans font-bold text-sm text-zinc-950 tracking-tight leading-snug">
-                          {project.title}
-                        </h4>
-                        <p className="font-sans font-normal text-zinc-400 text-[11px] line-clamp-1 max-w-[200px]">
-                          {project.tagline}
-                        </p>
-                        <div className="flex items-center gap-3 mt-3 pt-2 border-t border-zinc-50 select-none">
-                          <button
-                            onClick={() => handleEditProjectClick(project)}
-                            className="text-zinc-500 hover:text-zinc-950 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
-                          >
-                            <Edit className="w-3 h-3" />
-                            <span>Edit</span>
-                          </button>
-
-                          <div className="flex items-center gap-1 ml-1 pl-2 border-l border-zinc-100">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {projects
+                    .map((project, index) => ({ project, index }))
+                    .filter(({ project }) => {
+                      if (portfolioSubTab === "branding") {
+                        return project.category === "BRAND DESIGN" || project.category === "BRAND SYSTEM" || project.category === "IDENTITY" || project.category === "VISUAL SYSTEM";
+                      } else if (portfolioSubTab === "graphic") {
+                        return project.category === "GRAPHIC DESIGN" || project.category === "PACKAGING" || project.category === "ART DIRECTION" || project.category === "MOTION";
+                      } else {
+                        return project.category === "PRODUCT DESIGN" || project.category === "UI/UX";
+                      }
+                    })
+                    .map(({ project, index }) => (
+                      <div
+                        key={project.id}
+                        className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
+                      >
+                        <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0 select-none">
+                          <img
+                            src={project.image}
+                            alt={project.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200";
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-0.5 flex-grow">
+                          <span className="font-mono text-[8px] uppercase tracking-wider text-[#ffd230] font-semibold">
+                            {project.category}
+                          </span>
+                          <h4 className="font-sans font-bold text-sm text-zinc-950 tracking-tight leading-snug">
+                            {project.title}
+                          </h4>
+                          <p className="font-sans font-normal text-zinc-400 text-[11px] line-clamp-1 max-w-[200px]">
+                            {project.tagline}
+                          </p>
+                          <div className="flex items-center gap-3 mt-3 pt-2 border-t border-zinc-50 select-none">
                             <button
-                              type="button"
-                              disabled={index === 0}
-                              onClick={() => handleMoveProjectOrder(index, "up")}
-                              className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              onClick={() => handleEditProjectClick(project)}
+                              className="text-zinc-500 hover:text-zinc-950 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
                             >
-                              <ArrowUp className="w-3.5 h-3.5" />
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
                             </button>
+
+                            <div className="flex items-center gap-1 ml-1 pl-2 border-l border-zinc-100">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveProjectOrder(index, "up")}
+                                className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === projects.length - 1}
+                                onClick={() => handleMoveProjectOrder(index, "down")}
+                                className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
                             <button
-                              type="button"
-                              disabled={index === projects.length - 1}
-                              onClick={() => handleMoveProjectOrder(index, "down")}
-                              className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-950 rounded-sm disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="text-zinc-400 hover:text-red-600 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer ml-auto"
                             >
-                              <ArrowDown className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
                             </button>
                           </div>
-
-                          <button
-                            onClick={() => handleDeleteProject(project.id)}
-                            className="text-zinc-400 hover:text-red-600 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer ml-auto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>
@@ -2398,7 +2609,9 @@ export default function AdminPage() {
           >
             <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
               <h3 className="font-sans font-bold text-lg text-zinc-950">
-                {editingProject.id ? "Edit Case Study" : "Create Case Study"}
+                {editingProject.id 
+                  ? (editingProject.is_case_study ? "Edit Case Study" : "Edit Project")
+                  : (editingProject.is_case_study ? "Create Case Study" : "Create Project")}
               </h3>
               <button 
                 onClick={() => {
@@ -2470,6 +2683,8 @@ export default function AdminPage() {
                     <option value="ART DIRECTION">ART DIRECTION</option>
                     <option value="VISUAL SYSTEM">VISUAL SYSTEM</option>
                     <option value="GRAPHIC DESIGN">GRAPHIC DESIGN</option>
+                    <option value="PRODUCT DESIGN">PRODUCT DESIGN</option>
+                    <option value="UI/UX">UI/UX</option>
                   </select>
                 </div>
 
@@ -2550,131 +2765,164 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Subtitle (Tagline)
+              {/* Feature Settings Toggles */}
+              <div className="grid grid-cols-2 gap-4 border border-zinc-200 bg-zinc-50/50 rounded-2xl p-4 my-2 select-none">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editingProject.has_details}
+                    onChange={(e) => setEditingProject({ ...editingProject, has_details: e.target.checked })}
+                    className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Enable Details Page</span>
+                    <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Allows click to view designs</span>
+                  </div>
                 </label>
-                <input
-                  type="text"
-                  placeholder="Acoustic engineering met by pure..."
-                  value={editingProject.subtitle || editingProject.tagline || ""}
-                  onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                />
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editingProject.is_case_study}
+                    onChange={(e) => setEditingProject({ ...editingProject, is_case_study: e.target.checked })}
+                    className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Show in Case Studies</span>
+                    <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Features in homepage Case Studies swiper</span>
+                  </div>
+                </label>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Summary Text (About Brief)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Founded to challenge how we perceive auditory clarity..."
-                  value={editingProject.summary_text || editingProject.about || ""}
-                  onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                  Full Case Study Story Text
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="The complete detailed story text of this project case study..."
-                  value={editingProject.full_text || ""}
-                  onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
-                />
-              </div>
-
-              {/* Showcase Images Manager */}
-              <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
-                <div className="flex items-center justify-between select-none">
-                  <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                    Showcase Gallery Blocks
-                  </label>
-                  <div className="relative cursor-pointer">
+              {editingProject.has_details && (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                      Subtitle (Tagline)
+                    </label>
                     <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleUploadShowcaseBlockFiles}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      disabled={projectUploading}
+                      type="text"
+                      placeholder="Acoustic engineering met by pure..."
+                      value={editingProject.subtitle || editingProject.tagline || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                     />
-                    <button
-                      type="button"
-                      disabled={projectUploading}
-                      className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Images</span>
-                    </button>
                   </div>
-                </div>
 
-                {projectShowcaseImages.length === 0 ? (
-                  <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
-                    <Upload className="w-6 h-6 text-zinc-200 mb-2" />
-                    <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
-                    <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                      Summary Text (About Brief)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Founded to challenge how we perceive auditory clarity..."
+                      value={editingProject.summary_text || editingProject.about || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
+                    />
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-1">
-                    {projectShowcaseImages.map((img, idx) => (
-                      <div
-                        key={img.id || idx}
-                        className="flex items-center justify-between border border-zinc-100 bg-zinc-50/50 rounded-xl p-2.5 gap-3 shadow-2xs group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
-                            <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
-                            <select
-                              value={img.block_type || "before"}
-                              onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
-                              className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
-                            >
-                              <option value="before">Before the Story Text</option>
-                              <option value="after">After the Story Text</option>
-                            </select>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 select-none shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => moveBlockOrder(idx, "up")}
-                            disabled={idx === 0}
-                            className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
-                          >
-                            <ArrowUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveBlockOrder(idx, "down")}
-                            disabled={idx === projectShowcaseImages.length - 1}
-                            className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteShowcaseBlock(idx)}
-                            className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                      Full Case Study Story Text
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="The complete detailed story text of this project case study..."
+                      value={editingProject.full_text || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
+                      className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Showcase Images Manager */}
+                  <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
+                    <div className="flex items-center justify-between select-none">
+                      <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                        Showcase Gallery Blocks
+                      </label>
+                      <div className="relative cursor-pointer">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleUploadShowcaseBlockFiles}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          disabled={projectUploading}
+                        />
+                        <button
+                          type="button"
+                          disabled={projectUploading}
+                          className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Images</span>
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {projectShowcaseImages.length === 0 ? (
+                      <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
+                        <Upload className="w-6 h-6 text-zinc-200 mb-2" />
+                        <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
+                        <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                        {projectShowcaseImages.map((img, idx) => (
+                          <div
+                            key={img.id || idx}
+                            className="flex items-center justify-between border border-zinc-100 bg-zinc-50/50 rounded-xl p-2.5 gap-3 shadow-2xs group"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
+                                <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
+                                <select
+                                  value={img.block_type || "before"}
+                                  onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
+                                  className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
+                                >
+                                  <option value="before">Before the Story Text</option>
+                                  <option value="after">After the Story Text</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 select-none shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => moveBlockOrder(idx, "up")}
+                                disabled={idx === 0}
+                                className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveBlockOrder(idx, "down")}
+                                disabled={idx === projectShowcaseImages.length - 1}
+                                className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteShowcaseBlock(idx)}
+                                className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
 
             <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
@@ -2692,7 +2940,9 @@ export default function AdminPage() {
                 className="px-5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
               >
                 <Save className="w-4 h-4" />
-                <span>Save Case Study</span>
+                <span>
+                  {editingProject.is_case_study ? "Save Case Study" : "Save Project"}
+                </span>
               </button>
             </div>
           </div>

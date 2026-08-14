@@ -92,6 +92,7 @@ export default function ProjectPage({ params }: PageProps) {
   const scrollDeltaAccumulator = useRef(0);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const startX = useRef(0);
   const scrollLeftVal = useRef(0);
 
@@ -155,6 +156,7 @@ export default function ProjectPage({ params }: PageProps) {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!pcScrollContainerRef.current) return;
     setIsDragging(true);
+    setHasScrolled(true);
     startX.current = e.pageX - pcScrollContainerRef.current.offsetLeft;
     scrollLeftVal.current = pcScrollContainerRef.current.scrollLeft;
   };
@@ -201,11 +203,7 @@ export default function ProjectPage({ params }: PageProps) {
 
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/#case-studies-section");
-    }
+    router.push("/#case-studies-section");
   };
 
   useLayoutEffect(() => {
@@ -324,6 +322,7 @@ export default function ProjectPage({ params }: PageProps) {
             onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
+            onScroll={() => setHasScrolled(true)}
             className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
               isDragging ? "cursor-grabbing select-none" : "cursor-grab"
             }`}
@@ -337,6 +336,13 @@ export default function ProjectPage({ params }: PageProps) {
               />
             ))}
           </div>
+          {!hasScrolled && images.length > 1 && (
+            <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex justify-end select-none animate-pulse">
+              <span className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-widest mt-1">
+                drag or scroll horizontally →
+              </span>
+            </div>
+          )}
         </div>
         {/* Mobile stacked view */}
         <div className="w-full md:hidden flex flex-col gap-6 px-6">
@@ -438,103 +444,10 @@ export default function ProjectPage({ params }: PageProps) {
         renderImageTrack(beforeImages, "before")
       ) : (
         /* OLD SYSTEM FALLBACK FOR SEEDED AND STATIC DATA */
-        <>
-          {/* PC Horizontal Scroll Gallery (Same Height, Dynamic Proportional Width) */}
-          <div className="w-full md:block hidden overflow-hidden pb-12">
-            <div
-              ref={pcScrollContainerRef}
-              onMouseDown={handleMouseDown}
-              onMouseLeave={handleMouseLeave}
-              onMouseUp={handleMouseUp}
-              onMouseMove={handleMouseMove}
-              className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
-                isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-              }`}
-            >
-              {pcMediaItems.map((media: any, idx: number) => (
-                <div
-                  key={`pc-media-${idx}`}
-                  className={`pc-media-card shrink-0 relative h-[500px] ${media.aspect} rounded-2xl md:rounded-3xl overflow-hidden border border-zinc-200/50 bg-zinc-100 select-none isolate translate-z-0`}
-                  style={{
-                    transform: "translate3d(0, 0, 0)",
-                    backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                  }}
-                >
-                  <Image
-                    src={media.src}
-                    alt={`${project.title} gallery ${idx}`}
-                    fill
-                    sizes="(max-w-1024px) 100vw, 800px"
-                    className="object-cover object-center select-none"
-                    priority={idx < 2}
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Mobile Vertical Grid Gallery (Single or Double columns, Equal aspect ratios) */}
-          <div className="w-full md:hidden flex flex-col gap-4 px-6 pb-12">
-            {((project as any).media as any[] || []).map((block: any, bIdx: number) => {
-              if (block.type === "single") {
-                const media = block.images[0];
-                return (
-                  <div
-                    key={`mobile-block-${bIdx}`}
-                    className="mobile-media-card w-full aspect-[4/3] relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 isolate translate-z-0"
-                    style={{
-                      transform: "translate3d(0, 0, 0)",
-                      backfaceVisibility: "hidden",
-                      WebkitBackfaceVisibility: "hidden",
-                    }}
-                  >
-                    <Image
-                      src={media.src}
-                      alt={`${project.title} mobile ${bIdx}`}
-                      fill
-                      sizes="(max-w-768px) 100vw, 400px"
-                      className="object-cover object-center select-none"
-                      placeholder="blur"
-                      blurDataURL={BLUR_DATA_URL}
-                    />
-                  </div>
-                );
-              } else {
-                return (
-                  <div
-                    key={`mobile-block-${bIdx}`}
-                    className="w-full grid grid-cols-2 gap-4"
-                  >
-                    {(block.images as any[]).map((media: any, mIdx: number) => (
-                      <div
-                        key={`mobile-double-${bIdx}-${mIdx}`}
-                        className="mobile-media-card w-full aspect-square relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 isolate translate-z-0"
-                        style={{
-                          transform: "translate3d(0, 0, 0)",
-                          backfaceVisibility: "hidden",
-                          WebkitBackfaceVisibility: "hidden",
-                        }}
-                      >
-                        <Image
-                          src={media.src}
-                          alt={`${project.title} mobile double ${bIdx}-${mIdx}`}
-                          fill
-                          sizes="(max-w-768px) 50vw, 200px"
-                          className="object-cover object-center select-none"
-                          placeholder="blur"
-                          blurDataURL={BLUR_DATA_URL}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                );
-              }
-            })}
-          </div>
-        </>
+        renderImageTrack(
+          pcMediaItems.map((media: any) => ({ image_url: media.src })),
+          "legacy"
+        )
       )}
 
       {/* Brand Story & Details Section */}

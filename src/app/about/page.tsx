@@ -86,7 +86,7 @@ export default function AboutPage() {
   return (
     <main
       ref={containerRef}
-      className="relative min-h-screen bg-[#f8f8f7] text-zinc-950 overflow-x-hidden flex flex-col pb-24"
+      className="relative min-h-screen bg-[#f8f8f7] text-zinc-950 overflow-x-hidden flex flex-col"
     >
       {/* Custom Top Header Bar */}
       <div

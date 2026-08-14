@@ -27,6 +27,7 @@ export default function CaseStudies() {
           const { data, error } = await supabase
             .from("portfolio_projects")
             .select("*")
+            .eq("is_case_study", true)
             .order("position", { ascending: true })
             .order("created_at", { ascending: false });
 
