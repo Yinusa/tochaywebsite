@@ -112,7 +112,8 @@ export default function ExplorePage() {
     return () => ctx.revert();
   }, []);
 
-  const [projectList, setProjectList] = useState<any[]>(EXPLORE_PROJECTS);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -135,14 +136,55 @@ export default function ExplorePage() {
               { ...data[2 % data.length], slug: `${data[2 % data.length].slug}-dup3` },
             ];
             setProjectList(recycled);
+            setIsLoading(false);
+            return;
           }
         }
       } catch (err) {
         console.warn("Supabase fetch failed, falling back to static projects dataset:", err);
       }
+      // Fallback
+      setProjectList(EXPLORE_PROJECTS);
+      setIsLoading(false);
     };
     fetchProjects();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden pt-36 pb-24">
+        {/* Title Header Skeleton */}
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex flex-col items-start gap-4 animate-pulse select-none">
+          <div className="w-24 h-4 bg-zinc-900 rounded-md" />
+          <div className="w-48 sm:w-64 h-12 sm:h-16 bg-zinc-900 rounded-md" />
+        </div>
+        
+        {/* Staggered Rows Grid Skeleton */}
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 pt-16 flex flex-col gap-6 md:gap-8 animate-pulse select-none">
+          {/* Row 1: 4 cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="flex flex-col gap-3 w-full">
+                <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl" />
+                <div className="w-24 h-4 bg-zinc-900 rounded-md mt-1" />
+                <div className="w-16 h-3 bg-zinc-900 rounded-md" />
+              </div>
+            ))}
+          </div>
+          {/* Row 2: 3 cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 md:max-w-[884px] mx-auto w-full">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="flex flex-col gap-3 w-full">
+                <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl" />
+                <div className="w-24 h-4 bg-zinc-900 rounded-md mt-1" />
+                <div className="w-16 h-3 bg-zinc-900 rounded-md" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const row1 = projectList.slice(0, 4);  // 4 items
   const row2 = projectList.slice(4, 7);  // 3 items

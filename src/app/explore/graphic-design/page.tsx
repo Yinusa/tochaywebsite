@@ -11,7 +11,8 @@ import Footer from "@/components/ui/Footer";
 import { supabase } from "@/lib/supabase";
 
 export default function GraphicDesignExplorePage() {
-  const [projectList, setProjectList] = useState<any[]>(GRAPHIC_DESIGN_PROJECTS);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -35,14 +36,42 @@ export default function GraphicDesignExplorePage() {
                 p.category === "IDENTITY"
             );
             setProjectList(filtered);
+            setIsLoading(false);
+            return;
           }
         }
       } catch (err) {
         console.warn("Supabase fetch failed:", err);
       }
+      // Fallback
+      setProjectList(GRAPHIC_DESIGN_PROJECTS);
+      setIsLoading(false);
     };
     fetchProjects();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden pt-36">
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex flex-col items-start gap-4 animate-pulse select-none">
+          <div className="w-24 h-4 bg-zinc-900 rounded-md" />
+          <div className="w-48 sm:w-64 h-12 sm:h-16 bg-zinc-900 rounded-md" />
+        </div>
+        
+        <div className="w-full pt-16 pb-24 animate-pulse select-none">
+          <div className="w-full md:flex hidden flex-row gap-6 py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] overflow-hidden">
+            <div className="w-[400px] h-[420px] bg-zinc-900 rounded-3xl shrink-0" />
+            <div className="w-[400px] h-[420px] bg-zinc-900 rounded-3xl shrink-0 opacity-60" />
+            <div className="w-[400px] h-[420px] bg-zinc-900 rounded-3xl shrink-0 opacity-30" />
+          </div>
+          <div className="w-full md:hidden flex flex-col gap-8 px-6">
+            <div className="w-full aspect-[4/3] bg-zinc-900 rounded-3xl" />
+            <div className="w-full aspect-[4/3] bg-zinc-900 rounded-3xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);

@@ -21,7 +21,8 @@ export default function ProjectPage({ params }: PageProps) {
   const slug = resolvedParams?.slug || "";
   const router = useRouter();
 
-  const [projectList, setProjectList] = useState<any[]>(PROJECTS);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showcaseBlocks, setShowcaseBlocks] = useState<any[]>([]);
 
   useEffect(() => {
@@ -39,14 +40,34 @@ export default function ProjectPage({ params }: PageProps) {
 
           if (!error && data && data.length > 0) {
             setProjectList(data);
+            setIsLoading(false);
+            return;
           }
         }
       } catch (err) {
         console.warn("Supabase fetch failed:", err);
       }
+      // Fallback
+      setProjectList(PROJECTS);
+      setIsLoading(false);
     };
     fetchProjects();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-[#09090b] text-white flex flex-col overflow-x-hidden pt-40 pb-24 items-center animate-pulse select-none px-6">
+        <div className="w-24 h-4 bg-zinc-900 rounded-md mb-4" />
+        <div className="w-64 sm:w-96 h-12 sm:h-16 bg-zinc-900 rounded-md mb-8" />
+        <div className="w-full max-w-5xl aspect-[16/10] bg-zinc-900 rounded-3xl mb-16" />
+        <div className="w-full max-w-3xl flex flex-col gap-4 mt-8">
+          <div className="w-full h-4 bg-zinc-900 rounded-md" />
+          <div className="w-[90%] h-4 bg-zinc-900 rounded-md" />
+          <div className="w-[85%] h-4 bg-zinc-900 rounded-md" />
+        </div>
+      </div>
+    );
+  }
 
   // Find project matching the slug (stripping duplicate suffixes if routing from explore)
   const baseSlug = slug.replace(/-dup\d+$/, "");
