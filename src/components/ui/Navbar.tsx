@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -131,7 +132,7 @@ export default function Navbar() {
       >
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between relative z-50">
           {/* Brand Logo - left top */}
-          <a href="#" className="flex items-center select-none" onClick={() => setIsOpen(false)}>
+          <Link href="/" className="flex items-center select-none" onClick={() => setIsOpen(false)}>
             <Image
               src={isDark || isOpen ? "/images/toflogowhite.png" : "/images/toflogoblack.png"}
               alt="TY Logo"
@@ -140,7 +141,7 @@ export default function Navbar() {
               className="w-auto h-8 sm:h-9 object-contain"
               priority
             />
-          </a>
+          </Link>
 
           {/* Hamburger Menu - right top */}
           <button
@@ -184,27 +185,27 @@ export default function Navbar() {
               Capabilities
             </span>
             <div className="flex flex-col gap-2.5">
-              <a
+              <Link
                 href="/explore/branding"
                 onClick={() => setIsOpen(false)}
                 className="font-sans font-semibold text-lg sm:text-xl text-zinc-400 hover:text-white transition-colors duration-300"
               >
                 Branding
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/explore/graphic-design"
                 onClick={() => setIsOpen(false)}
                 className="font-sans font-semibold text-lg sm:text-xl text-zinc-400 hover:text-white transition-colors duration-300"
               >
                 Graphic Design
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/explore/product-design"
                 onClick={() => setIsOpen(false)}
                 className="font-sans font-semibold text-lg sm:text-xl text-zinc-400 hover:text-white transition-colors duration-300"
               >
                 Product Design
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -218,7 +219,7 @@ export default function Navbar() {
               Menu
             </span>
             <div className="flex flex-col gap-4 font-sans font-bold text-4xl sm:text-5xl md:text-6xl text-white uppercase tracking-tighter leading-none select-none">
-              <a
+              <Link
                 href="/explore"
                 onClick={() => setIsOpen(false)}
                 className={`transition-all duration-500 delay-300 hover:text-[#ffd230] ${
@@ -226,8 +227,8 @@ export default function Navbar() {
                 }`}
               >
                 Explore
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/about"
                 onClick={() => setIsOpen(false)}
                 className={`transition-all duration-500 delay-400 hover:text-[#ffd230] ${
@@ -235,8 +236,8 @@ export default function Navbar() {
                 }`}
               >
                 About
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/#contact-section"
                 onClick={() => setIsOpen(false)}
                 className={`transition-all duration-500 delay-500 hover:text-[#ffd230] ${
@@ -244,7 +245,7 @@ export default function Navbar() {
                 }`}
               >
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         </div>
