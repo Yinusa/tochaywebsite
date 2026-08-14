@@ -127,7 +127,6 @@ export default function AdminPage() {
   const [cardServiceItems, setCardServiceItems] = useState<CardServiceItem[]>([]);
   const [showcaseImages, setShowcaseImages] = useState<{ id: string; url_path: string; position: number }[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
-  const [newImagePosition, setNewImagePosition] = useState<number>(1);
   const [uploading, setUploading] = useState(false);
   const [projectUploading, setProjectUploading] = useState(false);
   const [projectShowcaseImages, setProjectShowcaseImages] = useState<any[]>([]);
@@ -328,15 +327,11 @@ export default function AdminPage() {
           .order("position", { ascending: true });
         if (dbShowcase && dbShowcase.length > 0) {
           setShowcaseImages(dbShowcase);
-          const maxPos = dbShowcase.reduce((max, img) => img.position > max ? img.position : max, 0);
-          setNewImagePosition(maxPos + 1);
         } else {
           const localData = localStorage.getItem("tochay_offline_showcase_images");
           if (localData) {
             const parsed = JSON.parse(localData);
             setShowcaseImages(parsed);
-            const maxPos = parsed.reduce((max: number, img: any) => img.position > max ? img.position : max, 0);
-            setNewImagePosition(maxPos + 1);
           }
         }
       } catch (err) {
@@ -346,8 +341,6 @@ export default function AdminPage() {
           try {
             const parsed = JSON.parse(localData);
             setShowcaseImages(parsed);
-            const maxPos = parsed.reduce((max: number, img: any) => img.position > max ? img.position : max, 0);
-            setNewImagePosition(maxPos + 1);
           } catch (e) {
             console.error(e);
           }
@@ -948,22 +941,15 @@ export default function AdminPage() {
   };
 
   // Mutators: Add Showcase image (LOCAL STATE ONLY)
-  const handleAddShowcaseImage = (url: string, position: number) => {
+  const handleAddShowcaseImage = (url: string) => {
     const tempId = `temp-${Math.random().toString(36).substring(2)}-${Date.now()}`;
-    const newImage = { id: tempId, url_path: url, position };
-    setShowcaseImages(prev => [...prev, newImage].sort((a, b) => a.position - b.position));
+    const newImage = { id: tempId, url_path: url, position: showcaseImages.length + 1 };
+    setShowcaseImages(prev => [...prev, newImage]);
   };
 
   // Mutators: Delete Showcase image (LOCAL STATE ONLY)
   const handleDeleteShowcaseImage = (id: string) => {
     setShowcaseImages(prev => prev.filter(img => img.id !== id));
-  };
-
-  // Mutators: Update Showcase image position order (LOCAL STATE ONLY)
-  const handleUpdateShowcasePosition = (id: string, newPos: number) => {
-    setShowcaseImages(prev => 
-      prev.map(img => img.id === id ? { ...img, position: newPos } : img).sort((a, b) => a.position - b.position)
-    );
   };
 
   // Swap positions in local state
@@ -973,10 +959,12 @@ export default function AdminPage() {
 
     setShowcaseImages(prev => {
       const next = [...prev];
-      const tempPos = next[index].position;
-      next[index].position = next[targetIndex].position;
-      next[targetIndex].position = tempPos;
-      return next.sort((a, b) => a.position - b.position);
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      
+      // Update position order dynamically based on index
+      return next.map((img, idx) => ({ ...img, position: idx + 1 }));
     });
   };
 
@@ -1074,8 +1062,6 @@ export default function AdminPage() {
         if (fetchError) throw fetchError;
         if (freshData) {
           setShowcaseImages(freshData);
-          const maxPos = freshData.reduce((max, img) => img.position > max ? img.position : max, 0);
-          setNewImagePosition(maxPos + 1);
         }
         onlineSaved = true;
       } else {
@@ -1123,7 +1109,6 @@ export default function AdminPage() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `hero/${fileName}`;
-      const targetPos = newImagePosition + i;
 
       let uploadedUrl = "";
 
@@ -1153,13 +1138,13 @@ export default function AdminPage() {
       }
 
       if (uploadedUrl) {
-        handleAddShowcaseImage(uploadedUrl, targetPos);
+        handleAddShowcaseImage(uploadedUrl);
         successCount++;
       } else {
         // 2. Base64 database storage fallback (with client-side image compression)
         try {
           const base64String = await compressImage(file, 1200, 0.7);
-          handleAddShowcaseImage(base64String, targetPos);
+          handleAddShowcaseImage(base64String);
           successCount++;
         } catch (base64Err) {
           console.error("Compression fallback failed:", base64Err);
@@ -1170,7 +1155,6 @@ export default function AdminPage() {
     setUploading(false);
     if (successCount > 0) {
       setAlert({ type: "success", message: `Added ${successCount} image(s) to local workspace layout.` });
-      setNewImagePosition(prev => prev + successCount);
     }
   };
 
@@ -1615,8 +1599,7 @@ export default function AdminPage() {
                 {/* Add showcase image form */}
                 <div className="border border-zinc-200 rounded-2xl p-5 bg-zinc-50/50 flex flex-col gap-4">
                   <span className="font-sans font-bold text-xs text-zinc-950 select-none">Add Showcase Image</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <div className="flex flex-col gap-1.5">
                       <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                         Image File Path or External URL
                       </label>
@@ -1625,31 +1608,17 @@ export default function AdminPage() {
                         placeholder="e.g. /images/portfolio-templates.png"
                         value={newImageUrl}
                         onChange={(e) => setNewImageUrl(e.target.value)}
-                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2 px-3 text-xs font-sans outline-hidden text-zinc-950"
+                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans outline-none focus:outline-none focus:ring-0 text-zinc-950"
                       />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                        Slide Order Position
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 1"
-                        value={newImagePosition}
-                        onChange={(e) => setNewImagePosition(Number(e.target.value))}
-                        className="w-full bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2 px-3 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                      />
-                    </div>
-                  </div>
 
                   <div className="flex flex-wrap items-center gap-3 mt-2 select-none">
                     <button
                       disabled={uploading}
                       onClick={() => {
                         if (!newImageUrl.trim()) return;
-                        handleAddShowcaseImage(newImageUrl.trim(), newImagePosition);
+                        handleAddShowcaseImage(newImageUrl.trim());
                         setNewImageUrl("");
-                        setNewImagePosition(prev => prev + 1);
                       }}
                       className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
                     >
@@ -1733,7 +1702,7 @@ export default function AdminPage() {
                                   : img.url_path.split("/").pop()}
                               </span>
                               <span className="font-sans font-normal text-zinc-400 text-[10px]">
-                                Position Order: {img.position}
+                                Slide {idx + 1}
                               </span>
                             </div>
                           </div>
@@ -1759,18 +1728,9 @@ export default function AdminPage() {
                               </button>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
-                              <label className="font-sans font-normal text-[10px] text-zinc-400">Order:</label>
-                              <input
-                                type="number"
-                                defaultValue={img.position}
-                                onBlur={(e) => handleUpdateShowcasePosition(img.id, Number(e.target.value))}
-                                className="w-12 bg-zinc-50 border border-zinc-200 rounded-lg p-1 text-center font-sans font-bold text-xs text-zinc-950 focus:border-zinc-500 outline-hidden"
-                              />
-                            </div>
                             <button
                               onClick={() => handleDeleteShowcaseImage(img.id)}
-                              className="text-zinc-400 hover:text-red-600 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                              className="text-zinc-400 hover:text-red-650 font-sans font-bold text-[10px] flex items-center gap-1 cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>Remove</span>
