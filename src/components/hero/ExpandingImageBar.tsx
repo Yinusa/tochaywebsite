@@ -145,7 +145,7 @@ export default function ExpandingImageBar() {
                   src={src}
                   alt={`Showcase item ${index + 1}`}
                   fill
-                  sizes="100vw"
+                  unoptimized={true}
                   className="object-cover object-center select-none"
                   priority={index === 0}
                   placeholder="blur"

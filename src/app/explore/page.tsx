@@ -10,6 +10,8 @@ import { PROJECTS } from "@/lib/projects-data";
 import Footer from "@/components/ui/Footer";
 import { supabase } from "@/lib/supabase";
 
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
+
 // 11 portfolio elements recycling the 8 database items
 const EXPLORE_PROJECTS = [
   ...PROJECTS,
@@ -267,8 +269,10 @@ export default function ExplorePage() {
                   src={project.image}
                   alt={project.title}
                   fill
-                  sizes="(max-w-768px) 50vw, 300px"
+                  unoptimized={true}
                   className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
               <div className="flex flex-col gap-1 select-none pl-1">
@@ -303,8 +307,10 @@ export default function ExplorePage() {
                   src={project.image}
                   alt={project.title}
                   fill
-                  sizes="(max-w-768px) 50vw, 400px"
+                  unoptimized={true}
                   className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
               <div className="flex flex-col gap-1 select-none pl-1">
@@ -339,8 +345,10 @@ export default function ExplorePage() {
                   src={project.image}
                   alt={project.title}
                   fill
-                  sizes="(max-w-768px) 50vw, 300px"
+                  unoptimized={true}
                   className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
               <div className="flex flex-col gap-1 select-none pl-1">

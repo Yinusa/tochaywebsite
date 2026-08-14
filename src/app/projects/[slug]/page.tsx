@@ -598,7 +598,7 @@ export default function ProjectPage({ params }: PageProps) {
                     src={proj.image}
                     alt={proj.title}
                     fill
-                    sizes="300px"
+                    unoptimized={true}
                     className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
                     placeholder="blur"
                     blurDataURL={BLUR_DATA_URL}

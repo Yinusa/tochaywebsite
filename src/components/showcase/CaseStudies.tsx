@@ -171,7 +171,7 @@ export default function CaseStudies() {
                     src={project.image}
                     alt={project.title}
                     fill
-                    sizes="(max-w-768px) 100vw, 400px"
+                    unoptimized={true}
                     className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
                     priority={index < 2}
                     placeholder="blur"
