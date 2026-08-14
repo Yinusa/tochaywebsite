@@ -211,7 +211,31 @@ export default function ProjectPage({ params }: PageProps) {
 
   const handleClose = (e: React.MouseEvent) => {
     e.preventDefault();
-    router.push("/#case-studies-section");
+    if (typeof window !== "undefined" && document.referrer) {
+      try {
+        const refUrl = new URL(document.referrer);
+        if (refUrl.origin === window.location.origin) {
+          if (refUrl.pathname.startsWith("/explore/") || refUrl.pathname === "/") {
+            router.push(refUrl.pathname + refUrl.hash);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Referrer parsing fallback active:", err);
+      }
+    }
+    
+    // Fallback using the project category
+    const cat = project?.category?.toUpperCase() || "";
+    if (cat === "BRAND DESIGN" || cat === "BRAND SYSTEM" || cat === "VISUAL SYSTEM") {
+      router.push("/explore/branding");
+    } else if (cat === "GRAPHIC DESIGN" || cat === "PACKAGING" || cat === "ART DIRECTION") {
+      router.push("/explore/graphic-design");
+    } else if (cat === "PRODUCT DESIGN" || cat === "UI/UX" || cat === "PRODUCT") {
+      router.push("/explore/product-design");
+    } else {
+      router.push("/#case-studies-section");
+    }
   };
 
   useLayoutEffect(() => {

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger } from "@/lib/gsap-config";
+import { usePathname } from "next/navigation";
 
 interface SmoothScrollProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface SmoothScrollProps {
 
 export default function SmoothScroll({ children }: SmoothScrollProps) {
   const lenisRef = useRef<Lenis | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     // Initialize Lenis smooth scroll engine
@@ -38,6 +40,15 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       lenis.destroy();
     };
   }, []);
+
+  // Reset scroll to top on route change
+  useEffect(() => {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: true });
+    }
+    window.scrollTo(0, 0);
+    ScrollTrigger.refresh();
+  }, [pathname]);
 
   return <div className="smooth-scroll-wrapper">{children}</div>;
 }
