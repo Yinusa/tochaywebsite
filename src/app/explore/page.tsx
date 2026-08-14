@@ -30,6 +30,9 @@ export default function ExplorePage() {
   const lastScrollY = useRef(0);
   const scrollDeltaAccumulator = useRef(0);
 
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -82,6 +85,8 @@ export default function ExplorePage() {
   };
 
   useLayoutEffect(() => {
+    if (isLoading) return;
+
     const ctx = gsap.context(() => {
       // Set initial states
       gsap.set(headerRef.current, { opacity: 0 });
@@ -110,10 +115,9 @@ export default function ExplorePage() {
     }, containerRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [isLoading]);
 
-  const [projectList, setProjectList] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchProjects = async () => {
