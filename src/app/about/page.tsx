@@ -108,7 +108,7 @@ export default function AboutPage() {
 
       {/* Main Container */}
       <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex-grow flex flex-col justify-center py-12 md:py-16">
-        
+
         {/* Giant Typographic Block - Lowercase and larger sizes */}
         <h1 className="flex flex-col text-[17vw] md:text-[11vw] font-sans font-semibold tracking-tighter leading-[0.82] text-zinc-950 select-none mt-4">
           <span ref={title1Ref} className="block origin-left">
@@ -116,7 +116,7 @@ export default function AboutPage() {
           </span>
           <div ref={title2Ref} className="flex items-center gap-4 sm:gap-6 md:gap-8">
             <span>me.</span>
-            
+
             {/* Square profile card sitting inline next to the text */}
             <div
               ref={profileCardRef}
@@ -145,7 +145,7 @@ export default function AboutPage() {
             {/* Story Description (Left Side) */}
             <div className="md:col-span-7">
               <p className="font-sans font-normal text-zinc-500 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed tracking-tight">
-                I’m a 25-year-old brand designer and logo architect with over 6 years of professional experience shaping visual identities for scale-ups. Outside design, I maintain a strong interest in technology and the arts—a combination that influences my clean, logical, yet highly expressive design systems.
+                I’m Oluwatofunmi Yinusa, a brand designer and logo architect with over 6 years of professional experience shaping visual identities for scale-ups. Outside design, I maintain a strong interest in technology and the arts—a combination that influences my clean, logical, yet highly expressive design systems.
               </p>
             </div>
 
