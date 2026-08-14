@@ -9,6 +9,7 @@ import { gsap } from "@/lib/gsap-config";
 import { BRANDING_DESIGN_PROJECTS } from "@/lib/projects-data";
 import Footer from "@/components/ui/Footer";
 import { supabase } from "@/lib/supabase";
+import ScrollCursorWrapper from "@/components/ui/ScrollCursorWrapper";
 
 export default function BrandingExplorePage() {
   const [projectList, setProjectList] = useState<any[]>([]);
@@ -243,9 +244,9 @@ export default function BrandingExplorePage() {
       </div>
 
       {!hasScrolled && projectList.length > 1 && (
-        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 md:flex justify-end select-none animate-pulse hidden mt-4">
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex justify-end select-none animate-pulse mt-4">
           <span className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-widest">
-            drag or scroll horizontally →
+            ← drag or scroll horizontally →
           </span>
         </div>
       )}
@@ -257,69 +258,71 @@ export default function BrandingExplorePage() {
       >
         {/* Desktop horizontal track */}
         <div className="w-full md:block hidden overflow-hidden select-none">
-          <div
-            ref={pcScrollContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            onScroll={() => setHasScrolled(true)}
-            className={`w-full flex flex-row items-start gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
-              isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-            }`}
-          >
-            {projectList.map((project, idx) => (
-              <div key={`branding-pc-${idx}`} className="flex flex-col gap-3 shrink-0">
-                {project.has_details ? (
-                  <Link
-                    href={`/projects/${project.slug}`}
-                    className="group relative h-[420px] w-auto rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 select-none isolate translate-z-0 cursor-pointer block"
-                    style={{
-                      transform: "translate3d(0, 0, 0)",
-                      backfaceVisibility: "hidden",
-                      WebkitBackfaceVisibility: "hidden",
-                    }}
-                  >
-                    <img
-                      src={project.image}
-                      alt={project.title}
-                      className="h-full w-auto object-contain transition-transform duration-700 ease-out group-hover:scale-102"
-                    />
-                  </Link>
-                ) : (
-                  <div
-                    className="relative h-[420px] w-auto rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 select-none isolate translate-z-0 block"
-                    style={{
-                      transform: "translate3d(0, 0, 0)",
-                      backfaceVisibility: "hidden",
-                      WebkitBackfaceVisibility: "hidden",
-                    }}
-                  >
-                    <img
-                      src={project.image}
-                      alt={project.title}
-                      className="h-full w-auto object-contain"
-                    />
-                  </div>
-                )}
+          <ScrollCursorWrapper>
+            <div
+              ref={pcScrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onScroll={() => setHasScrolled(true)}
+              className={`w-full flex flex-row items-start gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+                isDragging ? "select-none" : ""
+              }`}
+            >
+              {projectList.map((project, idx) => (
+                <div key={`branding-pc-${idx}`} className="flex flex-col gap-3 shrink-0">
+                  {project.has_details ? (
+                    <Link
+                      href={`/projects/${project.slug}`}
+                      className="group relative h-[420px] w-auto rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 select-none isolate translate-z-0 cursor-pointer block"
+                      style={{
+                        transform: "translate3d(0, 0, 0)",
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                      }}
+                    >
+                      <img
+                        src={project.image}
+                        alt={project.title}
+                        className="h-full w-auto object-contain transition-transform duration-700 ease-out group-hover:scale-102"
+                      />
+                    </Link>
+                  ) : (
+                    <div
+                      className="relative h-[420px] w-auto rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 select-none isolate translate-z-0 block"
+                      style={{
+                        transform: "translate3d(0, 0, 0)",
+                        backfaceVisibility: "hidden",
+                        WebkitBackfaceVisibility: "hidden",
+                      }}
+                    >
+                      <img
+                        src={project.image}
+                        alt={project.title}
+                        className="h-full w-auto object-contain"
+                      />
+                    </div>
+                  )}
 
-                {project.has_details && (
-                  <Link
-                    href={`/projects/${project.slug}`}
-                    className="group flex flex-col gap-0.5 select-none pl-1 cursor-pointer"
-                  >
-                    <span className="font-sans font-bold text-white text-base tracking-tight leading-none group-hover:text-[#ffd230] transition-colors duration-300">
-                      {project.title}
-                    </span>
-                    <span className="font-sans font-semibold text-[10px] uppercase tracking-wider text-zinc-400 group-hover:text-white transition-colors duration-300 flex items-center gap-1 mt-0.5">
-                      <span>view all designs</span>
-                      <span className="transform transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>
-                    </span>
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
+                  {project.has_details && (
+                    <Link
+                      href={`/projects/${project.slug}`}
+                      className="group flex flex-col gap-0.5 select-none pl-1 cursor-pointer"
+                    >
+                      <span className="font-sans font-bold text-white text-base tracking-tight leading-none group-hover:text-[#ffd230] transition-colors duration-300">
+                        {project.title}
+                      </span>
+                      <span className="font-sans font-semibold text-[10px] uppercase tracking-wider text-zinc-400 group-hover:text-white transition-colors duration-300 flex items-center gap-1 mt-0.5">
+                        <span>view all designs</span>
+                        <span className="transform transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>
+                      </span>
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollCursorWrapper>
         </div>
 
         {/* Mobile stacked view (vertical, one by one, full width, auto height) */}

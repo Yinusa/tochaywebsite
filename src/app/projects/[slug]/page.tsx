@@ -4,10 +4,12 @@ import React, { use, useLayoutEffect, useRef, useState, useEffect } from "react"
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { ArrowLeft, X, Maximize2, Plus, Minus, RotateCw, Info, Calendar } from "lucide-react";
+import Navbar from "@/components/ui/Navbar";
+import Footer from "@/components/ui/Footer";
+import ScrollCursorWrapper from "@/components/ui/ScrollCursorWrapper";
 import { gsap } from "@/lib/gsap-config";
 import { PROJECTS } from "@/lib/projects-data";
-import Footer from "@/components/ui/Footer";
 import { supabase } from "@/lib/supabase";
 
 const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
@@ -361,30 +363,32 @@ export default function ProjectPage({ params }: PageProps) {
       <div className="w-full">
         {/* Desktop horizontal track */}
         <div className="w-full md:block hidden overflow-hidden">
-          <div
-            ref={pcScrollContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            onScroll={() => setHasScrolled(true)}
-            className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
-              isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-            }`}
-          >
-            {images.map((img: any, idx: number) => (
-              <img
-                key={`${trackingId}-pc-${idx}`}
-                src={img.image_url}
-                alt="Showcase item"
-                className="pc-media-card shrink-0 h-[500px] w-auto object-contain rounded-2xl md:rounded-3xl border border-zinc-200/50 bg-zinc-100 select-none"
-              />
-            ))}
-          </div>
+          <ScrollCursorWrapper>
+            <div
+              ref={pcScrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onScroll={() => setHasScrolled(true)}
+              className={`w-full flex flex-row items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none py-6 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+                isDragging ? "select-none" : ""
+              }`}
+            >
+              {images.map((img: any, idx: number) => (
+                <img
+                  key={`${trackingId}-pc-${idx}`}
+                  src={img.image_url}
+                  alt="Showcase item"
+                  className="pc-media-card shrink-0 h-[500px] w-auto object-contain rounded-2xl md:rounded-3xl border border-zinc-200/50 bg-zinc-100 select-none"
+                />
+              ))}
+            </div>
+          </ScrollCursorWrapper>
           {!hasScrolled && images.length > 1 && (
             <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex justify-end select-none animate-pulse">
               <span className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-widest mt-1">
-                drag or scroll horizontally →
+                ← drag or scroll horizontally →
               </span>
             </div>
           )}
@@ -596,17 +600,18 @@ export default function ProjectPage({ params }: PageProps) {
 
         {/* Overlapping Staggered Card Swiper */}
         <div className="w-full overflow-hidden">
-          <div
-            ref={nextScrollContainerRef}
-            onMouseDown={handleMouseDownNext}
-            onMouseLeave={handleMouseLeaveNext}
-            onMouseUp={handleMouseUpNext}
-            onMouseMove={handleMouseMoveNext}
-            className={`w-full flex flex-row items-end gap-0 overflow-x-auto scrollbar-none py-12 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
-              isDraggingNext ? "cursor-grabbing select-none" : "cursor-grab"
-            }`}
-          >
-            {nextProjectsSequence.map((proj, idx) => (
+          <ScrollCursorWrapper>
+            <div
+              ref={nextScrollContainerRef}
+              onMouseDown={handleMouseDownNext}
+              onMouseLeave={handleMouseLeaveNext}
+              onMouseUp={handleMouseUpNext}
+              onMouseMove={handleMouseMoveNext}
+              className={`w-full flex flex-row items-end gap-0 overflow-x-auto scrollbar-none py-12 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+                isDraggingNext ? "select-none" : ""
+              }`}
+            >
+              {nextProjectsSequence.map((proj, idx) => (
               <Link
                 key={proj.slug}
                 href={`/projects/${proj.slug}`}
@@ -637,6 +642,7 @@ export default function ProjectPage({ params }: PageProps) {
               </Link>
             ))}
           </div>
+          </ScrollCursorWrapper>
         </div>
       </section>
       <Footer />

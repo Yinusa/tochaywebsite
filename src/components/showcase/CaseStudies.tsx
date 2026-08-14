@@ -9,7 +9,9 @@ import { supabase } from "@/lib/supabase";
 
 import { PROJECTS } from "@/lib/projects-data";
 
-const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNyIvPjwvc3ZnPg==";
+import ScrollCursorWrapper from "@/components/ui/ScrollCursorWrapper";
+
+const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNycvPjwvc3ZnPg==";
 
 export default function CaseStudies() {
   const [projectList, setProjectList] = useState(PROJECTS);
@@ -63,11 +65,13 @@ export default function CaseStudies() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5; // Drag speed multiplier
-    scrollContainerRef.current.scrollLeft = scrollLeftVal.current - walk;
+    // Drag navigation
+    if (isDragging && scrollContainerRef.current) {
+      e.preventDefault();
+      const x = e.pageX - scrollContainerRef.current.offsetLeft;
+      const walk = (x - startX.current) * 1.5; // Drag speed multiplier
+      scrollContainerRef.current.scrollLeft = scrollLeftVal.current - walk;
+    }
   };
 
   // 2. Mobile touch swipe focused card index tracker
@@ -121,7 +125,7 @@ export default function CaseStudies() {
       </div>
 
       {/* Bottom Slider Track (Spans edge-to-edge) */}
-      <div className="w-full overflow-hidden">
+      <ScrollCursorWrapper>
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
@@ -130,7 +134,7 @@ export default function CaseStudies() {
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove}
           className={`w-full flex flex-row items-end gap-4 md:gap-6 overflow-x-auto scrollbar-none snap-x snap-mandatory md:snap-none pt-8 pb-12 px-6 sm:px-8 md:pl-[max(48px,calc((100vw-1280px)/2+48px))] md:pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
-            isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+            isDragging ? "select-none" : ""
           }`}
         >
           {/* Dynamic Project Cards */}
@@ -184,7 +188,7 @@ export default function CaseStudies() {
             );
           })}
         </div>
-      </div>
+      </ScrollCursorWrapper>
     </section>
   );
 }
