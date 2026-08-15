@@ -134,10 +134,7 @@ export default function GraphicDesignExplorePage() {
     };
   }, []);
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.preventDefault();
-    router.push("/#capabilities-section");
-  };
+
 
   useLayoutEffect(() => {
     if (isLoading) return;
@@ -216,16 +213,15 @@ export default function GraphicDesignExplorePage() {
               : "bg-transparent py-8"
           }`}
         >
-          <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
-            <div></div>
-            <a
+          <div className="w-full max-w-7xl mx-auto flex items-center justify-end">
+            <Link
               href="/#capabilities-section"
-              onClick={handleClose}
+              scroll={false}
               className="group flex items-center gap-2 font-sans font-semibold text-xs sm:text-sm text-white hover:text-zinc-300 transition-colors duration-300 cursor-pointer"
             >
               <span>Close</span>
               <X className="w-4.5 h-4.5 text-zinc-400 group-hover:rotate-90 transition-transform duration-300" />
-            </a>
+            </Link>
           </div>
         </header>
       </div>

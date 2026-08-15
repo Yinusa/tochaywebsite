@@ -216,23 +216,28 @@ export default function ProjectPage({ params }: PageProps) {
     if (typeof window !== "undefined") {
       const prevPath = sessionStorage.getItem("tochay_prev_pathname");
       if (prevPath) {
-        if (prevPath.startsWith("/explore/") || prevPath === "/") {
-          router.push(prevPath === "/" ? "/#case-studies-section" : prevPath);
+        if (prevPath === "/explore" || prevPath.startsWith("/explore/") || prevPath === "/") {
+          router.push(prevPath === "/" ? "/#case-studies-section" : prevPath, { scroll: false });
           return;
         }
       }
     }
     
-    // Fallback using the project category
+    // Fallback: If it's a case study, return to case studies. Otherwise, route by category explore index.
+    if (project?.is_case_study) {
+      router.push("/#case-studies-section", { scroll: false });
+      return;
+    }
+
     const cat = project?.category?.toUpperCase() || "";
     if (cat === "BRAND DESIGN" || cat === "BRAND SYSTEM" || cat === "VISUAL SYSTEM") {
-      router.push("/explore/branding");
+      router.push("/explore/branding", { scroll: false });
     } else if (cat === "GRAPHIC DESIGN" || cat === "PACKAGING" || cat === "ART DIRECTION") {
-      router.push("/explore/graphic-design");
+      router.push("/explore/graphic-design", { scroll: false });
     } else if (cat === "PRODUCT DESIGN" || cat === "UI/UX" || cat === "PRODUCT") {
-      router.push("/explore/product-design");
+      router.push("/explore/product-design", { scroll: false });
     } else {
-      router.push("/#case-studies-section");
+      router.push("/#case-studies-section", { scroll: false });
     }
   };
 
@@ -447,8 +452,7 @@ export default function ProjectPage({ params }: PageProps) {
                 : "bg-transparent py-8"
           }`}
         >
-          <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
-            <div></div>
+          <div className="w-full max-w-7xl mx-auto flex items-center justify-end">
             <a
               href="/#case-studies-section"
               onClick={handleClose}

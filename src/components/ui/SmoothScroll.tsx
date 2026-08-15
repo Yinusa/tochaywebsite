@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger } from "@/lib/gsap-config";
 import { usePathname } from "next/navigation";
@@ -13,29 +13,10 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
   const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
   const prevPathnameRef = useRef<string | null>(null);
-  
-  const hasMountedRef = useRef(false);
-  const isTransitioningRef = useRef(false);
+  const isHashScrollingRef = useRef(false);
 
-  // Track SPA history pathnames
+  // Initialize Lenis smooth scroll engine
   useEffect(() => {
-    if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
-      sessionStorage.setItem("tochay_prev_pathname", prevPathnameRef.current);
-    }
-    prevPathnameRef.current = pathname;
-  }, [pathname]);
-
-  // Set transition state on route change to prevent premature hash cleanups during page transitions
-  useEffect(() => {
-    isTransitioningRef.current = true;
-    const timer = setTimeout(() => {
-      isTransitioningRef.current = false;
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [pathname]);
-
-  useEffect(() => {
-    // Initialize Lenis smooth scroll engine
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -49,14 +30,15 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
     lenis.on("scroll", () => {
       ScrollTrigger.update();
 
-      // Clear URL hash if the user scrolls away from the target section (ignore during active route shifts)
-      if (!isTransitioningRef.current && typeof window !== "undefined" && window.location.hash) {
+      // Only clean the hash if the user has manually scrolled AWAY from the target section
+      // and we are NOT in the middle of an automated hash-scroll transition
+      if (!isHashScrollingRef.current && typeof window !== "undefined" && window.location.hash) {
         try {
           const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
           if (targetEl) {
             const rect = targetEl.getBoundingClientRect();
-            const margin = 100;
-            const isOutOfView = rect.bottom < -margin || rect.top > window.innerHeight + margin;
+            // Section has scrolled out of view
+            const isOutOfView = rect.bottom < -50 || rect.top > window.innerHeight + 50;
             if (isOutOfView) {
               window.history.replaceState(
                 null,
@@ -85,58 +67,83 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
     };
   }, []);
 
-  // Reset scroll to top on route change (or jump to hash if present)
-  useEffect(() => {
-    // On initial page mount/refresh, bypass scroll reset to let browser natively restore positions
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      const hash = window.location.hash;
-      if (hash) {
-        const handleInitialHashScroll = () => {
-          const targetEl = document.querySelector(hash) as HTMLElement | null;
-          if (targetEl && lenisRef.current) {
-            lenisRef.current.scrollTo(targetEl, { immediate: true });
-            ScrollTrigger.refresh();
-          }
-        };
-        setTimeout(handleInitialHashScroll, 50);
-        setTimeout(handleInitialHashScroll, 250);
-      }
-      return;
-    }
+  // Robust element scroller with layout re-sync
+  const scrollToHashTarget = useCallback((hash: string) => {
+    if (!hash || typeof window === "undefined") return false;
+    try {
+      const targetEl = document.querySelector(hash) as HTMLElement | null;
+      if (targetEl) {
+        isHashScrollingRef.current = true;
+        
+        // 1. Immediately position DOM before frame render to eliminate visual flashes
+        targetEl.scrollIntoView({ behavior: "instant" as ScrollBehavior });
 
-    // On subsequent SPA route transitions:
-    const handleScrollReset = () => {
-      const hash = window.location.hash;
-      if (hash) {
-        const targetEl = document.querySelector(hash) as HTMLElement | null;
-        if (targetEl) {
-          if (lenisRef.current) {
-            lenisRef.current.scrollTo(targetEl, { immediate: true });
-          } else {
-            targetEl.scrollIntoView();
-          }
-          ScrollTrigger.refresh();
-          return;
+        // 2. Synchronize Lenis smooth scroll engine
+        if (lenisRef.current) {
+          lenisRef.current.scrollTo(targetEl, {
+            immediate: true,
+            offset: 0,
+          });
         }
-      }
 
-      // Default fallback: Reset to top for new route views
+        ScrollTrigger.refresh();
+
+        // Release the hash-scrolling lock after layout settles
+        setTimeout(() => {
+          isHashScrollingRef.current = false;
+        }, 800);
+
+        return true;
+      }
+    } catch (err) {
+      console.warn("Hash scroll target search failed:", err);
+    }
+    return false;
+  }, []);
+
+  // Track SPA history pathnames
+  useEffect(() => {
+    if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
+      sessionStorage.setItem("tochay_prev_pathname", prevPathnameRef.current);
+    }
+  }, [pathname]);
+
+  // Handle route and hash navigation transitions synchronously before paint
+  const useIsomorphicLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
+    const isRouteChange = prevPathnameRef.current !== null && prevPathnameRef.current !== pathname;
+    prevPathnameRef.current = pathname;
+
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+
+    if (hash) {
+      isHashScrollingRef.current = true;
+
+      // 1. Immediate synchronous attempt before browser paint
+      scrollToHashTarget(hash);
+
+      // 2. Multi-stage follow-ups as dynamic layout & GSAP triggers hydrate
+      const delays = [30, 80, 180, 350, 600];
+      const timers = delays.map((delay) =>
+        setTimeout(() => {
+          scrollToHashTarget(hash);
+        }, delay)
+      );
+
+      return () => {
+        timers.forEach((t) => clearTimeout(t));
+      };
+    } else if (isRouteChange) {
+      // Navigating to a clean new route without a hash -> scroll to top immediately
+      window.scrollTo(0, 0);
       if (lenisRef.current) {
         lenisRef.current.scrollTo(0, { immediate: true });
       }
-      window.scrollTo(0, 0);
       ScrollTrigger.refresh();
-    };
-
-    // Run with a double-pass timeout to compensate for React layout hydration and height shifts
-    const t1 = setTimeout(handleScrollReset, 50);
-    const t2 = setTimeout(handleScrollReset, 250);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [pathname]);
+    }
+  }, [pathname, scrollToHashTarget]);
 
   return <div className="smooth-scroll-wrapper">{children}</div>;
 }
+

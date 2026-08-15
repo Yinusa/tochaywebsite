@@ -2,13 +2,12 @@
 
 import React, { useLayoutEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { X } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
 import Footer from "@/components/ui/Footer";
 
 export default function AboutPage() {
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const title1Ref = useRef<HTMLSpanElement | null>(null);
@@ -16,16 +15,6 @@ export default function AboutPage() {
   const profileCardRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const signatureRef = useRef<HTMLSpanElement | null>(null);
-
-  const handleClose = (e: React.MouseEvent) => {
-    e.preventDefault();
-    // Check if there is history to go back to, preserving scroll depth
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/#brand-intro");
-    }
-  };
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -96,14 +85,14 @@ export default function AboutPage() {
         <span className="font-sans font-medium text-xs sm:text-sm tracking-tight text-zinc-400">
           @tochay
         </span>
-        <a
+        <Link
           href="/#brand-intro"
-          onClick={handleClose}
+          scroll={false}
           className="group flex items-center gap-2 font-sans font-semibold text-xs sm:text-sm text-zinc-950 hover:text-zinc-600 transition-colors duration-300"
         >
           <span>Close</span>
           <X className="w-4.5 h-4.5 text-zinc-500 group-hover:rotate-90 transition-transform duration-300" />
-        </a>
+        </Link>
       </div>
 
       {/* Main Container */}
