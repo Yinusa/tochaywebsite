@@ -1,13 +1,20 @@
 import { Resend } from "resend";
 
-// Initialize Resend Client instance
-const resendApiKey = process.env.RESEND_API_KEY || "";
-export const resend = new Resend(resendApiKey);
-
 // Default settings
 export const DEFAULT_RECIPIENT = process.env.NOTIFICATION_RECIPIENT_EMAIL || "tofunmiyinusa01@gmail.com";
 export const PRIMARY_SENDER = process.env.RESEND_FROM_EMAIL || "TY Studio <notifications@tofunmiyinusa.com>";
 export const FALLBACK_SENDER = "TY Studio <onboarding@resend.dev>";
+
+/**
+ * Lazily initialize Resend client instance to avoid build-time errors when env vars are missing
+ */
+export function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey.trim() === "") {
+    return null;
+  }
+  return new Resend(apiKey);
+}
 
 interface SendEmailOptions {
   to?: string | string[];
@@ -26,6 +33,15 @@ export async function sendNotificationEmail({
   replyTo,
 }: SendEmailOptions) {
   const recipient = Array.isArray(to) ? to : [to];
+  const resend = getResendClient();
+
+  if (!resend) {
+    console.warn("RESEND_API_KEY is not configured in environment variables.");
+    return {
+      success: false,
+      error: "RESEND_API_KEY is missing. Please add RESEND_API_KEY to your Vercel Project Settings.",
+    };
+  }
 
   try {
     // 1. Try sending with custom domain sender
@@ -38,7 +54,7 @@ export async function sendNotificationEmail({
     });
 
     if (response.error) {
-      console.warn("Primary sender failed, attempting fallback sender:", response.error.message);
+      console.warn("Primary sender notice, attempting fallback sender:", response.error.message);
 
       // 2. Retry with onboarding@resend.dev fallback if custom domain is unverified
       const fallbackResponse = await resend.emails.send({

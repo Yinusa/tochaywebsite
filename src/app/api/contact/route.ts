@@ -3,6 +3,9 @@ import { supabase } from "@/lib/supabase";
 import { sendNotificationEmail } from "@/lib/resend";
 import { getContactEmailHtml } from "@/lib/email-templates";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendNotificationEmail, DEFAULT_RECIPIENT } from "@/lib/resend";
 import { getTestEmailHtml } from "@/lib/email-templates";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(req: NextRequest) {
   try {
     const timestamp = new Date().toLocaleString("en-US", {
