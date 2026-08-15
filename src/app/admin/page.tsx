@@ -32,7 +32,10 @@ import {
   ArrowUp,
   ArrowDown,
   BookOpen,
-  Share2
+  Share2,
+  CheckCheck,
+  MailOpen,
+  Reply
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -83,6 +86,7 @@ interface InquiryItem {
   email: string;
   message: string;
   created_at: string;
+  is_read?: boolean;
 }
 
 interface CouponItem {
@@ -187,6 +191,82 @@ export default function AdminPage() {
   
   const [inclusionsCardId, setInclusionsCardId] = useState<string | null>(null);
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string>("");
+
+  // Inquiry filter & action states
+  const [inquiryFilter, setInquiryFilter] = useState<"all" | "unread" | "read">("all");
+  const [deletingInquiryId, setDeletingInquiryId] = useState<string | null>(null);
+
+  const handleToggleInquiryRead = async (id: string, currentReadStatus: boolean) => {
+    const nextStatus = !currentReadStatus;
+    // Optimistic update
+    setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, is_read: nextStatus } : inq));
+
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .update({ is_read: nextStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+      setAlert({
+        type: "success",
+        message: nextStatus ? "Marked inquiry as read" : "Marked inquiry as unread",
+      });
+    } catch (err: any) {
+      console.error("Failed to update inquiry read status:", err);
+      setAlert({ type: "error", message: "Failed to update inquiry status" });
+      // Revert if error
+      setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, is_read: currentReadStatus } : inq));
+    }
+  };
+
+  const handleDeleteInquiry = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this contact inquiry?")) {
+      return;
+    }
+
+    setDeletingInquiryId(id);
+    const prevInquiries = [...inquiries];
+    setInquiries(prev => prev.filter(inq => inq.id !== id));
+
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      setAlert({ type: "success", message: "Inquiry deleted successfully" });
+    } catch (err: any) {
+      console.error("Failed to delete inquiry:", err);
+      setAlert({ type: "error", message: "Failed to delete inquiry" });
+      setInquiries(prevInquiries);
+    } finally {
+      setDeletingInquiryId(null);
+    }
+  };
+
+  const handleMarkAllInquiriesAsRead = async () => {
+    const unreadInquiries = inquiries.filter(inq => !inq.is_read);
+    if (unreadInquiries.length === 0) return;
+
+    const prevInquiries = [...inquiries];
+    setInquiries(prev => prev.map(inq => ({ ...inq, is_read: true })));
+
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .update({ is_read: true })
+        .eq("is_read", false);
+
+      if (error) throw error;
+      setAlert({ type: "success", message: "All inquiries marked as read" });
+    } catch (err: any) {
+      console.error("Failed to mark all as read:", err);
+      setAlert({ type: "error", message: "Failed to mark all inquiries as read" });
+      setInquiries(prevInquiries);
+    }
+  };
 
   // Real-time UTC clock
   const [timeStr, setTimeStr] = useState("");
@@ -1528,10 +1608,14 @@ export default function AdminPage() {
             <Mail className="w-4 h-4 shrink-0" />
             <span>Contact Inquiries</span>
             {inquiries.length > 0 && (
-              <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === "inquiries" ? "bg-[#ffd230] text-zinc-950" : "bg-zinc-100 text-zinc-500"
+              <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                inquiries.some(i => !i.is_read)
+                  ? "bg-[#ffd230] text-zinc-950"
+                  : activeTab === "inquiries" ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-500"
               } ml-auto shrink-0`}>
-                {inquiries.length}
+                {inquiries.filter(i => !i.is_read).length > 0
+                  ? `${inquiries.filter(i => !i.is_read).length} new`
+                  : inquiries.length}
               </span>
             )}
           </button>
@@ -2426,47 +2510,212 @@ export default function AdminPage() {
           {/* TAB 3: CONTACT INQUIRIES */}
           {activeTab === "inquiries" && (
             <div className="flex flex-col gap-6">
-              <div className="pb-4 border-b border-zinc-100 select-none">
-                <h2 className="font-sans font-bold text-xl text-zinc-950">Contact Inquiries</h2>
-                <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">Read feedback submitted on the home screen collaboration form</p>
-              </div>
-
-              {inquiries.length === 0 ? (
-                <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
-                  <Mail className="w-10 h-10 text-zinc-200 mb-3" />
-                  <span className="font-sans font-bold text-zinc-400 text-sm">No Inquiries Found</span>
-                  <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
-                    Form submissions from visitors will appear here automatically.
+              {/* Header with Title & Filter / Bulk Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100 select-none">
+                <div>
+                  <h2 className="font-sans font-bold text-xl text-zinc-950">Contact Inquiries</h2>
+                  <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">
+                    Messages and project inquiries submitted via your portfolio contact section
                   </p>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {inquiries.map((inq) => (
-                    <div
-                      key={inq.id}
-                      className="border border-zinc-200 rounded-2xl p-5 hover:shadow-xs transition-shadow flex flex-col gap-2 relative bg-zinc-50/30"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 select-none">
-                        <div className="flex items-center gap-2">
-                          <span className="font-sans font-bold text-sm text-zinc-950">{inq.name}</span>
-                          <a
-                            href={`mailto:${inq.email}`}
-                            className="font-sans font-medium text-[10px] text-zinc-400 hover:text-zinc-950 transition-colors bg-zinc-100 px-2 py-0.5 rounded-md"
-                          >
-                            {inq.email}
-                          </a>
-                        </div>
-                        <span className="font-mono text-[9px] text-zinc-400">
-                          {new Date(inq.created_at).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="font-sans font-normal text-zinc-600 text-xs leading-relaxed max-w-2xl mt-1">
-                        {inq.message}
+
+                {inquiries.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Filter Pills */}
+                    <div className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+                      <button
+                        onClick={() => setInquiryFilter("all")}
+                        className={`px-3 py-1 rounded-lg font-sans font-semibold text-[11px] transition-all cursor-pointer ${
+                          inquiryFilter === "all"
+                            ? "bg-white text-zinc-950 shadow-xs"
+                            : "text-zinc-500 hover:text-zinc-900"
+                        }`}
+                      >
+                        All ({inquiries.length})
+                      </button>
+                      <button
+                        onClick={() => setInquiryFilter("unread")}
+                        className={`px-3 py-1 rounded-lg font-sans font-semibold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                          inquiryFilter === "unread"
+                            ? "bg-white text-zinc-950 shadow-xs"
+                            : "text-zinc-500 hover:text-zinc-900"
+                        }`}
+                      >
+                        {inquiries.some(i => !i.is_read) && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        )}
+                        Unread ({inquiries.filter(i => !i.is_read).length})
+                      </button>
+                      <button
+                        onClick={() => setInquiryFilter("read")}
+                        className={`px-3 py-1 rounded-lg font-sans font-semibold text-[11px] transition-all cursor-pointer ${
+                          inquiryFilter === "read"
+                            ? "bg-white text-zinc-950 shadow-xs"
+                            : "text-zinc-500 hover:text-zinc-900"
+                        }`}
+                      >
+                        Read ({inquiries.filter(i => i.is_read).length})
+                      </button>
+                    </div>
+
+                    {/* Mark All as Read Button */}
+                    {inquiries.some(i => !i.is_read) && (
+                      <button
+                        onClick={handleMarkAllInquiriesAsRead}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-900 text-white font-sans font-semibold text-[11px] hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        <span>Mark all read</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Inquiry List */}
+              {(() => {
+                const filteredInquiries = inquiries.filter((inq) => {
+                  if (inquiryFilter === "unread") return !inq.is_read;
+                  if (inquiryFilter === "read") return !!inq.is_read;
+                  return true;
+                });
+
+                if (inquiries.length === 0) {
+                  return (
+                    <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-20 flex flex-col items-center justify-center text-center select-none">
+                      <Mail className="w-10 h-10 text-zinc-200 mb-3" />
+                      <span className="font-sans font-bold text-zinc-400 text-sm">No Inquiries Found</span>
+                      <p className="font-sans font-normal text-zinc-400 text-xs max-w-xs mt-1 leading-normal">
+                        Form submissions from visitors will appear here automatically.
                       </p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+
+                if (filteredInquiries.length === 0) {
+                  return (
+                    <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-14 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
+                      <MailOpen className="w-8 h-8 text-zinc-300 mb-2" />
+                      <span className="font-sans font-semibold text-zinc-600 text-xs">
+                        No {inquiryFilter} inquiries
+                      </span>
+                      <button
+                        onClick={() => setInquiryFilter("all")}
+                        className="font-sans font-bold text-xs text-[#09090b] underline mt-2 cursor-pointer"
+                      >
+                        View all inquiries
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex flex-col gap-3.5">
+                    {filteredInquiries.map((inq) => {
+                      const isUnread = !inq.is_read;
+                      const isDeleting = deletingInquiryId === inq.id;
+
+                      return (
+                        <div
+                          key={inq.id}
+                          className={`border rounded-2xl p-5 transition-all duration-200 flex flex-col gap-3 relative ${
+                            isUnread
+                              ? "bg-white border-amber-300/80 shadow-sm"
+                              : "bg-zinc-50/60 border-zinc-200/80 opacity-90 hover:opacity-100"
+                          } ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
+                        >
+                          {/* Card Top Row: Sender Info & Actions */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none pb-2 border-b border-zinc-100">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Unread Indicator Badge */}
+                              {isUnread && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-sans font-bold text-[10px] uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                  New
+                                </span>
+                              )}
+
+                              <span className="font-sans font-bold text-sm text-zinc-950">
+                                {inq.name}
+                              </span>
+
+                              <a
+                                href={`mailto:${inq.email}?subject=${encodeURIComponent(`Re: Inquiry from ${inq.name} - TY Studio`)}`}
+                                className="font-sans font-medium text-[11px] text-zinc-500 hover:text-zinc-950 transition-colors bg-zinc-100 hover:bg-zinc-200 px-2.5 py-0.5 rounded-lg inline-flex items-center gap-1"
+                              >
+                                <span>{inq.email}</span>
+                              </a>
+                            </div>
+
+                            {/* Actions Toolbar */}
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                              <span className="font-mono text-[10px] text-zinc-400 mr-2">
+                                {new Date(inq.created_at).toLocaleString("en-US", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })}
+                              </span>
+
+                              {/* Toggle Read / Unread */}
+                              <button
+                                onClick={() => handleToggleInquiryRead(inq.id, !!inq.is_read)}
+                                title={isUnread ? "Mark as Read" : "Mark as Unread"}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-sans font-semibold text-[11px] transition-colors cursor-pointer border ${
+                                  isUnread
+                                    ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200"
+                                    : "bg-white hover:bg-zinc-100 text-zinc-500 border-zinc-200"
+                                }`}
+                              >
+                                {isUnread ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-zinc-700" />
+                                    <span>Mark Read</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <MailOpen className="w-3 h-3 text-zinc-400" />
+                                    <span>Unread</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {/* Direct Reply Button */}
+                              <a
+                                href={`mailto:${inq.email}?subject=${encodeURIComponent(`Re: Inquiry from ${inq.name} - TY Studio`)}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-sans font-semibold text-[11px] bg-[#ffd230] text-zinc-950 hover:bg-[#ffe17d] transition-colors cursor-pointer"
+                              >
+                                <Reply className="w-3 h-3" />
+                                <span>Reply</span>
+                              </a>
+
+                              {/* Delete Button */}
+                              <button
+                                onClick={() => handleDeleteInquiry(inq.id)}
+                                disabled={isDeleting}
+                                title="Delete Inquiry"
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Message Body */}
+                          <div className="pt-1">
+                            <p className="font-sans font-normal text-zinc-700 text-xs sm:text-sm leading-relaxed max-w-3xl whitespace-pre-wrap">
+                              {inq.message}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
