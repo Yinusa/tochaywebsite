@@ -230,6 +230,30 @@ export default function ClientShowcasePage() {
         localStorage.setItem(`tochay_offline_assets_${deck.id}`, JSON.stringify(updatedAssets));
       }
     }
+
+    // 3. Trigger real-time email notification when deliverable is approved
+    if (nextStatus === "Approved" && currentAsset && deck) {
+      const currentApprovedCount = updatedAssets.filter(a => a.status === "Approved").length;
+      fetch("/api/presentation-approved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deckId: deck.id,
+          deckTitle: deck.title,
+          clientName: deck.client_name,
+          assetId: currentAsset.id,
+          filename: currentAsset.filename,
+          category: currentAsset.category,
+          fileUrl: currentAsset.file_url,
+          reviewerName: authorName.trim() || "Client Reviewer",
+          approvedCount: currentApprovedCount,
+          totalCount: updatedAssets.length,
+          token: deck.token,
+        }),
+      }).catch(err => {
+        console.warn("Approval email notification notice:", err);
+      });
+    }
   };
 
   const handlePostComment = async (assetId: string) => {

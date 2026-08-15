@@ -65,30 +65,32 @@ export default function ContactSection() {
     setStatus("loading");
 
     try {
-      // Try to save directly to Supabase if connected
-      if (
-        process.env.NEXT_PUBLIC_SUPABASE_URL &&
-        !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-      ) {
-        const { error } = await supabase
-          .from("contact_messages")
-          .insert([{ name, email, message }]);
+      // 1. Submit to API handler (persists to Supabase and dispatches Resend email)
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
 
-        if (error) throw error;
-      } else {
-        // Fallback simulation: Log to console in local development
-        console.log("Supabase in placeholder mode. Simulating contact insert:", {
-          name,
-          email,
-          message,
-        });
-        await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate lag
+      if (!res.ok) {
+        throw new Error("Failed to send contact inquiry");
       }
 
       setStatus("success");
     } catch (err) {
       console.error("Failed to submit contact request:", err);
-      setStatus("error");
+      // Direct Supabase fallback if API route has network failure
+      try {
+        if (
+          process.env.NEXT_PUBLIC_SUPABASE_URL &&
+          !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+        ) {
+          await supabase.from("contact_messages").insert([{ name, email, message }]);
+        }
+        setStatus("success");
+      } catch (fallbackErr) {
+        setStatus("error");
+      }
     }
   };
 
