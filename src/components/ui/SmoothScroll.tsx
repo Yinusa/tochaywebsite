@@ -13,6 +13,9 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
   const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
   const prevPathnameRef = useRef<string | null>(null);
+  
+  const hasMountedRef = useRef(false);
+  const isTransitioningRef = useRef(false);
 
   // Track SPA history pathnames
   useEffect(() => {
@@ -20,6 +23,15 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       sessionStorage.setItem("tochay_prev_pathname", prevPathnameRef.current);
     }
     prevPathnameRef.current = pathname;
+  }, [pathname]);
+
+  // Set transition state on route change to prevent premature hash cleanups during page transitions
+  useEffect(() => {
+    isTransitioningRef.current = true;
+    const timer = setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   useEffect(() => {
@@ -37,8 +49,8 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
     lenis.on("scroll", () => {
       ScrollTrigger.update();
 
-      // Clear URL hash if the user scrolls away from the target section
-      if (typeof window !== "undefined" && window.location.hash) {
+      // Clear URL hash if the user scrolls away from the target section (ignore during active route shifts)
+      if (!isTransitioningRef.current && typeof window !== "undefined" && window.location.hash) {
         try {
           const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
           if (targetEl) {
@@ -75,6 +87,25 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
   // Reset scroll to top on route change (or jump to hash if present)
   useEffect(() => {
+    // On initial page mount/refresh, bypass scroll reset to let browser natively restore positions
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      const hash = window.location.hash;
+      if (hash) {
+        const handleInitialHashScroll = () => {
+          const targetEl = document.querySelector(hash) as HTMLElement | null;
+          if (targetEl && lenisRef.current) {
+            lenisRef.current.scrollTo(targetEl, { immediate: true });
+            ScrollTrigger.refresh();
+          }
+        };
+        setTimeout(handleInitialHashScroll, 50);
+        setTimeout(handleInitialHashScroll, 250);
+      }
+      return;
+    }
+
+    // On subsequent SPA route transitions:
     const handleScrollReset = () => {
       const hash = window.location.hash;
       if (hash) {
@@ -90,7 +121,7 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
         }
       }
 
-      // Default fallback: Reset to top
+      // Default fallback: Reset to top for new route views
       if (lenisRef.current) {
         lenisRef.current.scrollTo(0, { immediate: true });
       }
