@@ -33,8 +33,31 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
     lenisRef.current = lenis;
 
-    // Connect Lenis scroll updates to GSAP ScrollTrigger
-    lenis.on("scroll", ScrollTrigger.update);
+    // Connect Lenis scroll updates to GSAP ScrollTrigger and manage active hash removal
+    lenis.on("scroll", () => {
+      ScrollTrigger.update();
+
+      // Clear URL hash if the user scrolls away from the target section
+      if (typeof window !== "undefined" && window.location.hash) {
+        try {
+          const targetEl = document.querySelector(window.location.hash) as HTMLElement | null;
+          if (targetEl) {
+            const rect = targetEl.getBoundingClientRect();
+            const margin = 100;
+            const isOutOfView = rect.bottom < -margin || rect.top > window.innerHeight + margin;
+            if (isOutOfView) {
+              window.history.replaceState(
+                null,
+                "",
+                window.location.pathname + window.location.search
+              );
+            }
+          }
+        } catch (e) {
+          // Prevent selector parse errors
+        }
+      }
+    });
 
     // Use GSAP's requestAnimationFrame ticker to drive Lenis updates
     const updateGsapTicker = (time: number) => {
