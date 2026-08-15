@@ -14,4 +14,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 2. **Build Safety**: Always run `npm run build` after changes to verify zero warnings or errors.
 3. **Read Documentation**: Always read docs files (`docs/ARCHITECTURE.md`, etc.) before carrying out any architectural or style tasks.
 4. **Branding Typography**: Always use the **Gilroy** font family (`font-sans`) for all core layout typography (titles, headlines, body, taglines, subtext, and description paragraphs). The serif font family (Ogg / `font-serif` / `font-editorial`) must NOT be used for headers, text labels, or descriptions.
+5. **No Automatic Git Push**: Never run `git push` or publish git commits automatically. All git push operations are strictly left to the user to execute manually.
 

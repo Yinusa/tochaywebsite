@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendNotificationEmail } from "@/lib/resend";
-import { getApprovalEmailHtml, getRevisionRequestedEmailHtml } from "@/lib/email-templates";
+import { 
+  getApprovalEmailHtml, 
+  getRevisionRequestedEmailHtml, 
+  getCommentEmailHtml 
+} from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,8 +33,22 @@ export async function POST(req: NextRequest) {
     let emailHtml = "";
     let subject = "";
 
-    if (status === "Rejected") {
-      // 1. Changes Requested Notification
+    if (status === "Comment") {
+      // 1. Client Feedback Comment Notification
+      emailHtml = getCommentEmailHtml({
+        clientName,
+        deckTitle,
+        assetFilename,
+        category,
+        fileUrl,
+        reviewerName,
+        comment: comment || "New feedback comment posted.",
+        portalUrl,
+      });
+
+      subject = `💬 New Feedback: ${reviewerName} commented on "${assetFilename}" - ${deckTitle}`;
+    } else if (status === "Rejected") {
+      // 2. Changes Requested Notification
       emailHtml = getRevisionRequestedEmailHtml({
         clientName,
         deckTitle,
@@ -44,7 +62,7 @@ export async function POST(req: NextRequest) {
 
       subject = `⚠️ Changes Requested: ${clientName} requested revisions on "${assetFilename}" - ${deckTitle}`;
     } else {
-      // 2. Approval Notification
+      // 3. Approval Notification
       emailHtml = getApprovalEmailHtml({
         clientName,
         deckTitle,

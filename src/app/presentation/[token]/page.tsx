@@ -305,7 +305,7 @@ export default function ClientShowcasePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "Rejected",
+          status: "Comment",
           deckId: deck.id,
           deckTitle: deck.title,
           clientName: deck.client_name,
