@@ -242,7 +242,7 @@ export default function ProductDesignExplorePage() {
       </div>
 
       {!hasScrolled && projectList.length > 1 && (
-        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex justify-end select-none animate-pulse mt-4">
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 hidden md:flex justify-end select-none animate-pulse mt-4">
           <span className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-widest">
             ← drag or scroll horizontally →
           </span>

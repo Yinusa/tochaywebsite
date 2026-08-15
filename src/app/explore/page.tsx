@@ -131,17 +131,12 @@ export default function ExplorePage() {
           const { data, error } = await supabase
             .from("portfolio_projects")
             .select("*")
+            .eq("is_case_study", true)
             .order("position", { ascending: true })
             .order("created_at", { ascending: false });
 
           if (!error && data && data.length > 0) {
-            const recycled = [
-              ...data,
-              { ...data[0], slug: `${data[0].slug}-dup1` },
-              { ...data[1 % data.length], slug: `${data[1 % data.length].slug}-dup2` },
-              { ...data[2 % data.length], slug: `${data[2 % data.length].slug}-dup3` },
-            ];
-            setProjectList(recycled);
+            setProjectList(data);
             setIsLoading(false);
             return;
           }
@@ -150,7 +145,7 @@ export default function ExplorePage() {
         console.warn("Supabase fetch failed, falling back to static projects dataset:", err);
       }
       // Fallback
-      setProjectList(EXPLORE_PROJECTS);
+      setProjectList(PROJECTS);
       setIsLoading(false);
     };
     fetchProjects();
@@ -167,19 +162,8 @@ export default function ExplorePage() {
         
         {/* Staggered Rows Grid Skeleton */}
         <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 pt-16 flex flex-col gap-6 md:gap-8 animate-pulse select-none">
-          {/* Row 1: 4 cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="flex flex-col gap-3 w-full">
-                <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl" />
-                <div className="w-24 h-4 bg-zinc-900 rounded-md mt-1" />
-                <div className="w-16 h-3 bg-zinc-900 rounded-md" />
-              </div>
-            ))}
-          </div>
-          {/* Row 2: 3 cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 md:max-w-[884px] mx-auto w-full">
-            {[1, 2, 3].map((n) => (
               <div key={n} className="flex flex-col gap-3 w-full">
                 <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl" />
                 <div className="w-24 h-4 bg-zinc-900 rounded-md mt-1" />
@@ -191,10 +175,6 @@ export default function ExplorePage() {
       </div>
     );
   }
-
-  const row1 = projectList.slice(0, 4);  // 4 items
-  const row2 = projectList.slice(4, 7);  // 3 items
-  const row3 = projectList.slice(7, 11); // 4 items
 
   return (
     <div
@@ -247,89 +227,12 @@ export default function ExplorePage() {
       {/* Vertical Staggered Rows Container */}
       <div
         ref={gridContainerRef}
-        className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 py-16 md:py-24 flex flex-col gap-6 md:gap-8"
+        className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 py-16 md:py-24"
       >
-        {/* Row 1: 4 columns on PC, 2 on Mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {row1.map((project, idx) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {projectList.map((project, idx) => (
             <Link
-              key={`row1-${idx}`}
-              href={`/projects/${project.slug}`}
-              className="grid-card group flex flex-col gap-3 w-full cursor-pointer"
-            >
-              <div
-                className="relative w-full aspect-[3/4] rounded-lg md:rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 isolate translate-z-0 transition-transform duration-500 ease-out hover:scale-[1.02] shadow-md hover:shadow-xl hover:shadow-black/60"
-                style={{
-                  transform: "translate3d(0, 0, 0)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                }}
-              >
-                <Image
-                  src={project.image}
-                  alt={project.title}
-                  fill
-                  unoptimized={true}
-                  className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
-                />
-              </div>
-              <div className="flex flex-col gap-1 select-none pl-1">
-                <span className="font-sans font-bold text-white text-base sm:text-lg tracking-tight leading-none group-hover:text-zinc-300 transition-colors duration-300">
-                  {project.title}
-                </span>
-                <span className="font-sans font-normal text-zinc-400 text-xs sm:text-sm tracking-tight leading-tight">
-                  {project.program}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Row 2: 3 columns on PC (symmetrically sized with Row 1), 2 on Mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 md:max-w-[884px] mx-auto w-full">
-          {row2.map((project, idx) => (
-            <Link
-              key={`row2-${idx}`}
-              href={`/projects/${project.slug}`}
-              className="grid-card group flex flex-col gap-3 w-full cursor-pointer"
-            >
-              <div
-                className="relative w-full aspect-[3/4] rounded-lg md:rounded-xl overflow-hidden border border-zinc-900 bg-zinc-950 isolate translate-z-0 transition-transform duration-500 ease-out hover:scale-[1.02] shadow-md hover:shadow-xl hover:shadow-black/60"
-                style={{
-                  transform: "translate3d(0, 0, 0)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                }}
-              >
-                <Image
-                  src={project.image}
-                  alt={project.title}
-                  fill
-                  unoptimized={true}
-                  className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
-                />
-              </div>
-              <div className="flex flex-col gap-1 select-none pl-1">
-                <span className="font-sans font-bold text-white text-base sm:text-lg tracking-tight leading-none group-hover:text-zinc-300 transition-colors duration-300">
-                  {project.title}
-                </span>
-                <span className="font-sans font-normal text-zinc-400 text-xs sm:text-sm tracking-tight leading-tight">
-                  {project.program}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Row 3: 4 columns on PC, 2 on Mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {row3.map((project, idx) => (
-            <Link
-              key={`row3-${idx}`}
+              key={`${project.slug}-${idx}`}
               href={`/projects/${project.slug}`}
               className="grid-card group flex flex-col gap-3 w-full cursor-pointer"
             >

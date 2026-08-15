@@ -14,7 +14,8 @@ import ScrollCursorWrapper from "@/components/ui/ScrollCursorWrapper";
 const BLUR_DATA_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2UxZTFlNycvPjwvc3ZnPg==";
 
 export default function CaseStudies() {
-  const [projectList, setProjectList] = useState(PROJECTS);
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -35,11 +36,15 @@ export default function CaseStudies() {
 
           if (!error && data && data.length > 0) {
             setProjectList(data as any);
+            setIsLoading(false);
+            return;
           }
         }
       } catch (err) {
         console.warn("Supabase fetch failed, falling back to static projects dataset:", err);
       }
+      setProjectList(PROJECTS);
+      setIsLoading(false);
     };
     fetchProjects();
   }, []);
@@ -137,56 +142,74 @@ export default function CaseStudies() {
             isDragging ? "select-none" : ""
           }`}
         >
-          {/* Dynamic Project Cards */}
-          {projectList.map((project, index) => {
-            // PC Staggered Heights: Tall -> Medium -> Short
-            const heightClasses = [
-              "md:h-[580px]", // Tall
-              "md:h-[490px]", // Medium
-              "md:h-[400px]", // Short
-            ];
-            const heightClass = heightClasses[index % 3];
+          {/* Dynamic Project Cards / Skeleton Loader */}
+          {isLoading ? (
+            [0, 1, 2].map((idx) => {
+              const heightClasses = [
+                "md:h-[580px]", // Tall
+                "md:h-[490px]", // Medium
+                "md:h-[400px]", // Short
+              ];
+              const heightClass = heightClasses[idx % 3];
 
-            // Mobile focus logic check
-            const isFocusedMobile = index === focusedIndex;
-
-            return (
-              <Link
-                key={project.title}
-                href={`/projects/${project.slug}`}
-                className={`case-card-wrapper shrink-0 snap-center w-[280px] sm:w-[320px] md:w-[400px] flex flex-col transition-all duration-500 ease-out ${
-                  // Mobile active zoom/hover focus effect
-                  isFocusedMobile
-                    ? "scale-[1.03] -translate-y-2"
-                    : "md:scale-100 md:translate-y-0"
-                } md:hover:-translate-y-4 md:hover:scale-[1.02] cursor-pointer`}
-              >
-                {/* Image Card Container (Uniform PC Heights) */}
+              return (
                 <div
-                  className={`relative w-full h-[340px] ${heightClass} rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border border-zinc-900 group isolate translate-z-0`}
-                  style={{
-                    transform: "translate3d(0, 0, 0)",
-                    backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                  }}
-                >
-                  {/* Cover Project Image */}
-                  <Image
-                    src={project.image}
-                    alt={project.title}
-                    fill
-                    unoptimized={true}
-                    className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
-                    priority={index < 2}
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                  />
+                  key={`cs-skeleton-${idx}`}
+                  className={`shrink-0 w-[280px] sm:w-[320px] md:w-[400px] h-[340px] ${heightClass} rounded-2xl md:rounded-3xl bg-zinc-900/40 border border-zinc-900/50 animate-pulse`}
+                />
+              );
+            })
+          ) : (
+            projectList.map((project, index) => {
+              // PC Staggered Heights: Tall -> Medium -> Short
+              const heightClasses = [
+                "md:h-[580px]", // Tall
+                "md:h-[490px]", // Medium
+                "md:h-[400px]", // Short
+              ];
+              const heightClass = heightClasses[index % 3];
 
-                  {/* Gradient Overlay removed for bright, undimmed card look */}
-                </div>
-              </Link>
-            );
-          })}
+              // Mobile focus logic check
+              const isFocusedMobile = index === focusedIndex;
+
+              return (
+                <Link
+                  key={project.title}
+                  href={`/projects/${project.slug}`}
+                  className={`case-card-wrapper shrink-0 snap-center w-[280px] sm:w-[320px] md:w-[400px] flex flex-col transition-all duration-500 ease-out ${
+                    // Mobile active zoom/hover focus effect
+                    isFocusedMobile
+                      ? "scale-[1.03] -translate-y-2"
+                      : "md:scale-100 md:translate-y-0"
+                  } md:hover:-translate-y-4 md:hover:scale-[1.02] cursor-pointer`}
+                >
+                  {/* Image Card Container (Uniform PC Heights) */}
+                  <div
+                    className={`relative w-full h-[340px] ${heightClass} rounded-2xl md:rounded-3xl overflow-hidden shadow-lg border border-zinc-900 group isolate translate-z-0`}
+                    style={{
+                      transform: "translate3d(0, 0, 0)",
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                    }}
+                  >
+                    {/* Cover Project Image */}
+                    <Image
+                      src={project.image}
+                      alt={project.title}
+                      fill
+                      unoptimized={true}
+                      className="object-cover object-center select-none transition-transform duration-700 ease-out group-hover:scale-105"
+                      priority={index < 2}
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
+                    />
+
+                    {/* Gradient Overlay removed for bright, undimmed card look */}
+                  </div>
+                </Link>
+              );
+            })
+          )}
         </div>
       </ScrollCursorWrapper>
     </section>
