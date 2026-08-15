@@ -231,13 +231,14 @@ export default function ClientShowcasePage() {
       }
     }
 
-    // 3. Trigger real-time email notification when deliverable is approved
-    if (nextStatus === "Approved" && currentAsset && deck) {
+    // 3. Trigger real-time email notification when deliverable status changes (Approved or Request Changes)
+    if ((nextStatus === "Approved" || nextStatus === "Rejected") && currentAsset && deck) {
       const currentApprovedCount = updatedAssets.filter(a => a.status === "Approved").length;
       fetch("/api/presentation-approved", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          status: nextStatus,
           deckId: deck.id,
           deckTitle: deck.title,
           clientName: deck.client_name,
@@ -251,7 +252,7 @@ export default function ClientShowcasePage() {
           token: deck.token,
         }),
       }).catch(err => {
-        console.warn("Approval email notification notice:", err);
+        console.warn("Presentation status email notification notice:", err);
       });
     }
   };
@@ -295,6 +296,30 @@ export default function ClientShowcasePage() {
     } catch (err) {
       console.warn("Offline comment cached locally.");
       localStorage.setItem(`tochay_offline_comments_${assetId}`, JSON.stringify(updatedList));
+    }
+
+    // Trigger real-time comment notification email
+    const targetAsset = assets.find(a => a.id === assetId);
+    if (targetAsset && deck) {
+      fetch("/api/presentation-approved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Rejected",
+          deckId: deck.id,
+          deckTitle: deck.title,
+          clientName: deck.client_name,
+          assetId: targetAsset.id,
+          filename: targetAsset.filename,
+          category: targetAsset.category,
+          fileUrl: targetAsset.file_url,
+          reviewerName: reviewer,
+          comment: freshComment.comment,
+          token: deck.token,
+        }),
+      }).catch(err => {
+        console.warn("Comment notification email notice:", err);
+      });
     }
   };
 

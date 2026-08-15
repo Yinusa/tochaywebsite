@@ -375,3 +375,110 @@ export function getTestEmailHtml({
     },
   });
 }
+
+/**
+ * 4. Client Presentation Changes Requested Email Template (Clean Light)
+ */
+export function getRevisionRequestedEmailHtml({
+  clientName,
+  deckTitle,
+  assetFilename,
+  category,
+  fileUrl,
+  reviewerName = "Client Reviewer",
+  comment,
+  portalUrl,
+}: {
+  clientName: string;
+  deckTitle: string;
+  assetFilename: string;
+  category: string;
+  fileUrl?: string;
+  reviewerName?: string;
+  comment?: string;
+  portalUrl?: string;
+}) {
+  const content = `
+    <!-- Request Changes Milestone Grid -->
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 16px 0 20px 0; background-color: #f8f8fa; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden;">
+      <tr>
+        <td style="padding: 14px 18px; border-bottom: 1px solid #eeeeef;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Client & Project
+          </span>
+          <span style="font-size: 15px; font-weight: 700; color: #09090b;">
+            ${clientName} &bull; ${deckTitle}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 14px 18px; border-bottom: 1px solid #eeeeef;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Deliverable Needing Changes
+          </span>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px;">
+            <span style="font-size: 15px; font-weight: 600; color: #dc2626;">
+              &times; ${assetFilename}
+            </span>
+            <span style="display: inline-block; background-color: #e4e4e7; color: #52525b; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; margin-left: 8px;">
+              ${category}
+            </span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 14px 18px;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Requested By
+          </span>
+          <span style="font-size: 14px; font-weight: 600; color: #27272a;">
+            ${reviewerName}
+          </span>
+        </td>
+      </tr>
+    </table>
+
+    ${
+      comment
+        ? `
+    <!-- Client Feedback Quote -->
+    <div style="margin: 18px 0;">
+      <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">
+        Feedback Note
+      </span>
+      <div style="background-color: #fafafc; border-left: 3px solid #dc2626; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 12px 12px 0; padding: 14px 18px; font-size: 14px; line-height: 1.6; color: #18181b;">
+        ${comment}
+      </div>
+    </div>
+    `
+        : ""
+    }
+
+    ${
+      fileUrl && (fileUrl.endsWith(".jpg") || fileUrl.endsWith(".jpeg") || fileUrl.endsWith(".png") || fileUrl.endsWith(".webp"))
+        ? `
+    <!-- Asset Preview Card -->
+    <div style="margin: 18px 0; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; background-color: #fafafa; text-align: center; padding: 12px;">
+      <img src="${fileUrl}" alt="${assetFilename}" style="max-width: 100%; max-height: 280px; object-fit: contain; display: block; margin: 0 auto; border-radius: 8px;" />
+    </div>
+    `
+        : ""
+    }
+  `;
+
+  return wrapEmailLayout({
+    previewText: `⚠ ${clientName} requested changes on "${assetFilename}" in ${deckTitle}`,
+    badgeText: "Changes Requested",
+    badgeBg: "#fee2e2",
+    badgeTextColor: "#991b1b",
+    title: "Revisions Requested",
+    subtitle: `${clientName} requested revisions on deliverable <strong style="color: #09090b;">${assetFilename}</strong>.`,
+    children: content,
+    actionButton: portalUrl
+      ? {
+          text: "Open Presentation Deck",
+          url: portalUrl,
+        }
+      : undefined,
+  });
+}

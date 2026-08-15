@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendNotificationEmail } from "@/lib/resend";
-import { getApprovalEmailHtml } from "@/lib/email-templates";
+import { getApprovalEmailHtml, getRevisionRequestedEmailHtml } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,12 +9,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
+      status = "Approved",
       clientName = "Client",
       deckTitle = "Presentation Deck",
       assetFilename = "Asset",
       category = "Design",
       fileUrl,
       reviewerName = "Client Reviewer",
+      comment,
       approvedCount,
       totalCount,
       token,
@@ -24,23 +26,44 @@ export async function POST(req: NextRequest) {
       ? `https://tofunmiyinusa.com/presentation/${token}`
       : undefined;
 
-    const emailHtml = getApprovalEmailHtml({
-      clientName,
-      deckTitle,
-      assetFilename,
-      category,
-      fileUrl,
-      reviewerName,
-      approvedCount,
-      totalCount,
-      portalUrl,
-    });
+    let emailHtml = "";
+    let subject = "";
 
-    const isComplete = totalCount && approvedCount && approvedCount >= totalCount;
-    const subjectPrefix = isComplete ? "🎉 Deck Complete:" : "✓ Approved:";
+    if (status === "Rejected") {
+      // 1. Changes Requested Notification
+      emailHtml = getRevisionRequestedEmailHtml({
+        clientName,
+        deckTitle,
+        assetFilename,
+        category,
+        fileUrl,
+        reviewerName,
+        comment,
+        portalUrl,
+      });
+
+      subject = `⚠️ Changes Requested: ${clientName} requested revisions on "${assetFilename}" - ${deckTitle}`;
+    } else {
+      // 2. Approval Notification
+      emailHtml = getApprovalEmailHtml({
+        clientName,
+        deckTitle,
+        assetFilename,
+        category,
+        fileUrl,
+        reviewerName,
+        approvedCount,
+        totalCount,
+        portalUrl,
+      });
+
+      const isComplete = totalCount && approvedCount && approvedCount >= totalCount;
+      const subjectPrefix = isComplete ? "🎉 Deck Complete:" : "✓ Approved:";
+      subject = `${subjectPrefix} ${clientName} approved "${assetFilename}" - ${deckTitle}`;
+    }
 
     const emailResult = await sendNotificationEmail({
-      subject: `${subjectPrefix} ${clientName} approved "${assetFilename}" - ${deckTitle}`,
+      subject,
       html: emailHtml,
     });
 
@@ -50,7 +73,7 @@ export async function POST(req: NextRequest) {
       emailId: emailResult.id,
     });
   } catch (err: any) {
-    console.error("Presentation approved API handler error:", err);
+    console.error("Presentation status API handler error:", err);
     return NextResponse.json(
       { error: err?.message || "Internal server error" },
       { status: 500 }
