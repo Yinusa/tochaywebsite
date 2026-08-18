@@ -1170,17 +1170,17 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
         </div>
 
         {/* Minimal View Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-2 select-none">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-2 select-none w-full max-w-full">
           <button
             onClick={() => setActiveTab("roadmap")}
-            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === "roadmap"
                 ? "bg-zinc-950 text-white shadow-xs"
                 : "bg-white text-zinc-600 hover:text-zinc-950 border border-zinc-200/80"
             }`}
           >
             <span>Roadmap</span>
-            <span className={`font-mono text-[9px] px-1.5 py-0.2 rounded-full ${
+            <span className={`font-mono text-[9px] px-1.5 py-0.2 rounded-full shrink-0 ${
               activeTab === "roadmap" ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"
             }`}>
               {(portal.phases || []).length}
@@ -1189,14 +1189,14 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
 
           <button
             onClick={() => setActiveTab("files")}
-            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === "files"
                 ? "bg-zinc-950 text-white shadow-xs"
                 : "bg-white text-zinc-600 hover:text-zinc-950 border border-zinc-200/80"
             }`}
           >
             <span>Deliverables & Files</span>
-            <span className={`font-mono text-[9px] px-1.5 py-0.2 rounded-full ${
+            <span className={`font-mono text-[9px] px-1.5 py-0.2 rounded-full shrink-0 ${
               activeTab === "files" ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-600"
             }`}>
               {(portal.files || []).length}
@@ -1205,7 +1205,7 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
 
           <button
             onClick={() => setActiveTab("financials")}
-            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-2 shrink-0 whitespace-nowrap ${
               activeTab === "financials"
                 ? "bg-zinc-950 text-white shadow-xs"
                 : "bg-white text-zinc-600 hover:text-zinc-950 border border-zinc-200/80"
@@ -1216,7 +1216,7 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
 
           <button
             onClick={() => setActiveTab("settings")}
-            className={`p-2.5 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center justify-center ${
+            className={`p-2.5 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center justify-center shrink-0 ${
               activeTab === "settings"
                 ? "bg-zinc-950 text-white shadow-xs"
                 : "bg-white text-zinc-600 hover:text-zinc-950 border border-zinc-200/80"
