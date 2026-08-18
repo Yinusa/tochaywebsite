@@ -30,7 +30,11 @@ import {
   FolderOpen,
   DollarSign,
   Copy,
-  Lock
+  Lock,
+  Bell,
+  Send,
+  Mail,
+  CheckCircle2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -110,6 +114,8 @@ export interface ClientPortalItem {
   project_title: string;
   token: string;
   client_logo_url?: string | null;
+  client_email?: string | null;
+  notification_preferences?: any;
   status: "Onboarding" | "In Progress" | "In Review" | "Completed" | "On Hold";
   start_date?: string | null;
   target_delivery_date?: string | null;
@@ -147,6 +153,19 @@ export default function ClientPortalsTab() {
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Quick Client Notify Modal State
+  const [notifyModalOpen, setNotifyModalOpen] = useState(false);
+  const [notifyTarget, setNotifyTarget] = useState<{
+    portal: ClientPortalItem | Partial<ClientPortalItem>;
+    phase?: PortalPhaseItem;
+    presentation?: any;
+    type: "presentation_ready" | "milestone_update" | "files_released" | "custom_message";
+    headline: string;
+    presentationToken?: string;
+  } | null>(null);
+  const [notifyCustomMessage, setNotifyCustomMessage] = useState("");
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   // New file form state
   const [newFileCategory, setNewFileCategory] = useState("Logo Files");
@@ -772,6 +791,83 @@ export default function ClientPortalsTab() {
     setPortalFiles(portalFiles.filter((_, idx) => idx !== index));
   };
 
+  // Client Notification Handlers
+  const handleOpenNotifyModal = (
+    portal: ClientPortalItem | Partial<ClientPortalItem>,
+    type: "presentation_ready" | "milestone_update" | "files_released" | "custom_message",
+    phase?: PortalPhaseItem,
+    presentation?: any
+  ) => {
+    let headline = "Project Update Available";
+    let presentationToken: string | undefined = undefined;
+
+    if (type === "presentation_ready") {
+      const selectedPres = presentation?.presentation_id 
+        ? presentationsList.find(p => p.id === presentation.presentation_id) 
+        : null;
+      headline = presentation?.version_label 
+        ? `New Concepts Ready: ${presentation.version_label}`
+        : "New Design Presentation Ready for Review";
+      presentationToken = selectedPres?.token;
+    } else if (type === "milestone_update") {
+      headline = phase?.title 
+        ? `Milestone Update: ${phase.title}`
+        : "Project Milestone Advanced";
+    } else if (type === "files_released") {
+      headline = "Final Deliverable Asset Package Released";
+    }
+
+    setNotifyTarget({
+      portal,
+      phase,
+      presentation,
+      type,
+      headline,
+      presentationToken
+    });
+    setNotifyCustomMessage("");
+    setNotifyModalOpen(true);
+  };
+
+  const handleSendNotification = async () => {
+    if (!notifyTarget || !notifyTarget.portal.client_email) {
+      setAlert({ type: "error", message: "Client email is required to send notifications." });
+      return;
+    }
+
+    try {
+      setSendingNotification(true);
+      const res = await fetch("/api/portal-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientEmail: notifyTarget.portal.client_email,
+          clientName: notifyTarget.portal.client_name,
+          projectTitle: notifyTarget.portal.project_title,
+          token: notifyTarget.portal.token,
+          type: notifyTarget.type,
+          headline: notifyTarget.headline,
+          message: notifyCustomMessage,
+          presentationToken: notifyTarget.presentationToken
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to send email");
+      }
+
+      setAlert({ type: "success", message: `Notification email sent to ${notifyTarget.portal.client_email}!` });
+      setNotifyModalOpen(false);
+      setTimeout(() => setAlert(null), 4000);
+    } catch (err: any) {
+      console.error("Notify error:", err);
+      setAlert({ type: "error", message: err.message || "Failed to send notification email." });
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   // Save Portal & Relations to Database
   const handleSavePortal = async () => {
     if (!editingPortal?.client_name?.trim() || !editingPortal?.project_title?.trim()) {
@@ -790,6 +886,7 @@ export default function ClientPortalsTab() {
         project_title: editingPortal.project_title.trim(),
         token: editingPortal.token?.trim() || "portal-" + Math.random().toString(36).substring(2, 9),
         client_logo_url: editingPortal.client_logo_url || null,
+        client_email: editingPortal.client_email?.trim() || null,
         status: editingPortal.status || "In Progress",
         start_date: editingPortal.start_date || null,
         target_delivery_date: editingPortal.target_delivery_date || null,
@@ -1144,6 +1241,14 @@ export default function ClientPortalsTab() {
                     </a>
 
                     <button
+                      onClick={() => handleOpenNotifyModal(portal, "custom_message")}
+                      title={portal.client_email ? `Notify Client (${portal.client_email})` : "Send Client Notification"}
+                      className="p-2 rounded-lg text-zinc-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
                       onClick={() => handleOpenEditModal(portal)}
                       title="Edit Portal & Roadmap"
                       className="p-2 rounded-lg text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
@@ -1319,6 +1424,35 @@ export default function ClientPortalsTab() {
                       className="px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950"
                     />
                   </div>
+
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="font-sans font-bold text-xs text-zinc-700">Client Notification Email</label>
+                      {editingPortal.client_email && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenNotifyModal(editingPortal, "custom_message")}
+                          className="text-[11px] font-sans font-bold text-zinc-900 hover:text-amber-700 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Send className="w-3 h-3 text-zinc-600" />
+                          <span>Send Test / Update Notification</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative flex items-center">
+                      <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                      <input
+                        type="email"
+                        placeholder="e.g. client@company.com"
+                        value={editingPortal.client_email || ""}
+                        onChange={(e) => setEditingPortal({ ...editingPortal, client_email: e.target.value })}
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950"
+                      />
+                    </div>
+                    <span className="font-sans text-[10px] text-zinc-400">
+                      When set, you can 1-click notify the client whenever new milestones or design presentations are ready.
+                    </span>
+                  </div>
                 </div>
               )}
 
@@ -1414,8 +1548,18 @@ export default function ClientPortalsTab() {
                                 </button>
                               </div>
 
-                              {/* Move & Delete */}
-                              <div className="flex items-center gap-0.5 ml-1">
+                              {/* Notify Client, Move & Delete */}
+                              <div className="flex items-center gap-1 ml-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenNotifyModal(editingPortal || {}, "milestone_update", phase)}
+                                  className="px-2 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950 font-sans font-bold text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1"
+                                  title="Notify Client of Milestone Status"
+                                >
+                                  <Bell className="w-3 h-3 text-zinc-500" />
+                                  <span className="hidden xs:inline">Notify</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   disabled={idx === 0}
@@ -1435,7 +1579,7 @@ export default function ClientPortalsTab() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemovePhase(idx)}
-                                  className="p-1 rounded-md text-zinc-400 hover:text-red-600 cursor-pointer ml-1"
+                                  className="p-1 rounded-md text-zinc-400 hover:text-red-600 cursor-pointer ml-0.5"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1517,6 +1661,16 @@ export default function ClientPortalsTab() {
                                         />
                                         <span className="font-sans text-[10px] font-bold text-zinc-600">Active Review</span>
                                       </label>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenNotifyModal(editingPortal || {}, "presentation_ready", phase, pres)}
+                                        className="px-2 py-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-900 font-sans font-bold text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1"
+                                        title="Notify Client: Concepts Ready for Review"
+                                      >
+                                        <Send className="w-2.5 h-2.5 text-amber-700" />
+                                        <span>Notify Client</span>
+                                      </button>
 
                                       <button
                                         type="button"
@@ -1979,6 +2133,143 @@ export default function ClientPortalsTab() {
                 <span>Save Client Portal</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK CLIENT NOTIFY MODAL */}
+      {notifyModalOpen && notifyTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in select-none">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden border border-zinc-200 shadow-2xl flex flex-col max-h-[90vh]">
+            
+            {/* Modal Top Bar */}
+            <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-900">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-sans font-bold text-sm text-zinc-950">
+                    Send Client Email Notification
+                  </h3>
+                  <p className="font-sans text-[11px] text-zinc-400">
+                    {notifyTarget.portal.client_name} &bull; {notifyTarget.portal.project_title}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setNotifyModalOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex flex-col gap-4">
+              {/* Recipient Email Info */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans font-bold text-xs text-zinc-700">Recipient Email Address</label>
+                <div className="relative flex items-center">
+                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="email"
+                    value={notifyTarget.portal.client_email || ""}
+                    onChange={(e) => {
+                      const newEmail = e.target.value;
+                      setNotifyTarget(prev => prev ? ({
+                        ...prev,
+                        portal: { ...prev.portal, client_email: newEmail }
+                      }) : null);
+                      if (editingPortal) {
+                        setEditingPortal(prev => prev ? ({ ...prev, client_email: newEmail }) : null);
+                      }
+                    }}
+                    placeholder="e.g. client@company.com"
+                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950"
+                  />
+                </div>
+                {!notifyTarget.portal.client_email && (
+                  <span className="font-sans text-[11px] text-amber-700 font-semibold">
+                    ⚠️ Please enter an email address for the client before sending.
+                  </span>
+                )}
+              </div>
+
+              {/* Notification Type Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans font-bold text-xs text-zinc-700">Notification Category</label>
+                <select
+                  value={notifyTarget.type}
+                  onChange={(e) => {
+                    const newType = e.target.value as any;
+                    let headline = "Project Update Available";
+                    if (newType === "presentation_ready") headline = "New Design Presentation Ready for Review";
+                    else if (newType === "milestone_update") headline = "Milestone Roadmap Progress Update";
+                    else if (newType === "files_released") headline = "Final Deliverable Asset Package Released";
+                    setNotifyTarget(prev => prev ? ({ ...prev, type: newType, headline }) : null);
+                  }}
+                  className="px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950"
+                >
+                  <option value="presentation_ready">Design Concepts / Presentation Ready for Review</option>
+                  <option value="milestone_update">Milestone Roadmap Progress Update</option>
+                  <option value="files_released">Final Deliverable Asset Package Released</option>
+                  <option value="custom_message">Custom Studio Update</option>
+                </select>
+              </div>
+
+              {/* Headline / Subject Preview */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans font-bold text-xs text-zinc-700">Email Headline / Subject</label>
+                <input
+                  type="text"
+                  value={notifyTarget.headline}
+                  onChange={(e) => setNotifyTarget(prev => prev ? ({ ...prev, headline: e.target.value }) : null)}
+                  className="px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950 font-semibold"
+                />
+              </div>
+
+              {/* Optional Personal Note */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans font-bold text-xs text-zinc-700">
+                  Personal Message from TY Studio <span className="text-zinc-400 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={notifyCustomMessage}
+                  onChange={(e) => setNotifyCustomMessage(e.target.value)}
+                  placeholder="e.g. Please take a look at the attached v1 concepts and share your feedback on typography & color palettes..."
+                  className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl font-sans text-xs text-zinc-900 focus:outline-none focus:border-zinc-950 resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setNotifyModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-zinc-500 hover:text-zinc-900 font-sans font-semibold text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendNotification}
+                disabled={sendingNotification || !notifyTarget.portal.client_email}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-sans font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                {sendingNotification ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                <span>Send Notification Email</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}

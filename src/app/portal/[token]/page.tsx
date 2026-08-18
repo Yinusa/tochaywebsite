@@ -35,7 +35,11 @@ import {
   DollarSign,
   ArrowUpRight,
   Receipt,
-  FileCheck2
+  FileCheck2,
+  Settings,
+  Trash2,
+  Bell,
+  Save
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/ui/Navbar";
@@ -92,6 +96,12 @@ interface ClientPortal {
   project_title: string;
   token: string;
   client_logo_url?: string | null;
+  client_email?: string | null;
+  notification_preferences?: {
+    milestones?: boolean;
+    presentations?: boolean;
+    files?: boolean;
+  } | null;
   status: "Onboarding" | "In Progress" | "In Review" | "Completed" | "On Hold";
   start_date?: string | null;
   target_delivery_date?: string | null;
@@ -130,7 +140,17 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [notFound, setNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState<"roadmap" | "files" | "financials">("roadmap");
+  const [activeTab, setActiveTab] = useState<"roadmap" | "files" | "financials" | "settings">("roadmap");
+
+  // Client Notification Email Settings State
+  const [clientEmailInput, setClientEmailInput] = useState("");
+  const [clientNotifPrefs, setClientNotifPrefs] = useState({
+    milestones: true,
+    presentations: true,
+    files: true
+  });
+  const [savingClientSettings, setSavingClientSettings] = useState(false);
+  const [clientSettingsAlert, setClientSettingsAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Active Presentation deck per phase state: { [phaseId: string]: string (presentationId) }
   const [selectedDeckByPhase, setSelectedDeckByPhase] = useState<{ [phaseId: string]: string }>({});
@@ -442,6 +462,16 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
         invoice_items: invoiceItems
       });
 
+      if (portalData.client_email) {
+        setClientEmailInput(portalData.client_email);
+      }
+      if (portalData.notification_preferences) {
+        setClientNotifPrefs(prev => ({
+          ...prev,
+          ...portalData.notification_preferences
+        }));
+      }
+
       // 4. Fetch site & bank settings dynamically from Supabase / local cache
       try {
         const { data: dbSettings } = await supabase
@@ -734,6 +764,111 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
           token: portal.token
         })
       }).catch((err) => console.warn("Comment email alert notice:", err));
+    }
+  };
+
+  // Client Notification Email Settings Handlers
+  const handleSaveClientSettings = async () => {
+    if (!portal) return;
+    const trimmedEmail = clientEmailInput.trim();
+    if (trimmedEmail && !trimmedEmail.includes("@")) {
+      setClientSettingsAlert({ type: "error", message: "Please enter a valid email address." });
+      return;
+    }
+
+    try {
+      setSavingClientSettings(true);
+      const isNewOrChanged = trimmedEmail && trimmedEmail !== (portal.client_email || "");
+
+      // 1. Update in Supabase
+      const { error } = await supabase
+        .from("client_portals")
+        .update({
+          client_email: trimmedEmail || null,
+          notification_preferences: clientNotifPrefs
+        })
+        .eq("id", portal.id);
+
+      if (error) {
+        console.warn("Supabase portal settings update notice:", error);
+      }
+
+      // Update local storage fallback
+      const cached = localStorage.getItem("tochay_offline_portals");
+      if (cached) {
+        try {
+          const list = JSON.parse(cached);
+          const updated = list.map((p: any) => p.id === portal.id ? { ...p, client_email: trimmedEmail || null, notification_preferences: clientNotifPrefs } : p);
+          localStorage.setItem("tochay_offline_portals", JSON.stringify(updated));
+        } catch (e) {}
+      }
+
+      setPortal(prev => prev ? ({
+        ...prev,
+        client_email: trimmedEmail || null,
+        notification_preferences: clientNotifPrefs
+      }) : null);
+
+      // 2. If new or changed email, send welcome onboarding email!
+      if (isNewOrChanged) {
+        try {
+          await fetch("/api/portal-notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clientEmail: trimmedEmail,
+              clientName: portal.client_name,
+              projectTitle: portal.project_title,
+              token: portal.token,
+              type: "onboarding"
+            })
+          });
+        } catch (e) {
+          console.warn("Welcome email dispatch notice:", e);
+        }
+      }
+
+      setClientSettingsAlert({
+        type: "success",
+        message: isNewOrChanged 
+          ? `Settings saved! Welcome onboarding email sent to ${trimmedEmail}`
+          : "Notification preferences updated successfully!"
+      });
+      setTimeout(() => setClientSettingsAlert(null), 5000);
+    } catch (err: any) {
+      console.error("Failed to save client settings:", err);
+      setClientSettingsAlert({ type: "error", message: "Failed to update notification settings." });
+    } finally {
+      setSavingClientSettings(false);
+    }
+  };
+
+  const handleDeleteClientEmail = async () => {
+    if (!portal) return;
+    try {
+      setSavingClientSettings(true);
+      await supabase
+        .from("client_portals")
+        .update({ client_email: null })
+        .eq("id", portal.id);
+
+      const cached = localStorage.getItem("tochay_offline_portals");
+      if (cached) {
+        try {
+          const list = JSON.parse(cached);
+          const updated = list.map((p: any) => p.id === portal.id ? { ...p, client_email: null } : p);
+          localStorage.setItem("tochay_offline_portals", JSON.stringify(updated));
+        } catch (e) {}
+      }
+
+      setClientEmailInput("");
+      setPortal(prev => prev ? ({ ...prev, client_email: null }) : null);
+      setClientSettingsAlert({ type: "success", message: "Notification email removed." });
+      setTimeout(() => setClientSettingsAlert(null), 4000);
+    } catch (err) {
+      setClientSettingsAlert({ type: "error", message: "Failed to remove email." });
+    } finally {
+      setSavingClientSettings(false);
     }
   };
 
@@ -1077,6 +1212,19 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
             }`}
           >
             <span>Retainer & Invoicing</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`p-2.5 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center justify-center ${
+              activeTab === "settings"
+                ? "bg-zinc-950 text-white shadow-xs"
+                : "bg-white text-zinc-600 hover:text-zinc-950 border border-zinc-200/80"
+            }`}
+            title="Notification & Email Settings"
+            aria-label="Notification & Email Settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -1683,6 +1831,168 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
                   <span className="font-bold text-zinc-900">{siteSettings.account_name || "Oluwatofunmi Yinusa"}</span>
                 </div>
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* TAB 4: CLIENT NOTIFICATION SETTINGS */}
+        {activeTab === "settings" && (
+          <section className="flex flex-col gap-6">
+            <div className="p-7 sm:p-9 rounded-3xl bg-white border border-zinc-200/80 shadow-xs flex flex-col gap-6">
+              
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-900 shrink-0">
+                    <Bell className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="font-sans font-bold text-base sm:text-lg text-zinc-950">
+                      Notification & Email Settings
+                    </h2>
+                    <p className="font-sans text-xs text-zinc-500 mt-0.5">
+                      Configure where project roadmap updates, design reviews, and download links will be delivered.
+                    </p>
+                  </div>
+                </div>
+
+                {portal.client_email && (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 font-sans font-bold text-[11px] self-start sm:self-auto">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Notifications Active</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Alert Feedback */}
+              {clientSettingsAlert && (
+                <div className={`p-4 rounded-2xl border text-xs font-sans font-semibold flex items-center justify-between gap-3 animate-fade-in ${
+                  clientSettingsAlert.type === "success"
+                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                    : "bg-red-50/80 border-red-200 text-red-900"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {clientSettingsAlert.type === "success" ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    )}
+                    <span>{clientSettingsAlert.message}</span>
+                  </div>
+                  <button
+                    onClick={() => setClientSettingsAlert(null)}
+                    className="p-1 rounded-md hover:bg-black/5 text-zinc-400 hover:text-zinc-900 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Primary Email Field */}
+              <div className="flex flex-col gap-2">
+                <label className="font-sans font-bold text-xs text-zinc-900 uppercase tracking-wider">
+                  Client Notification Email
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex-grow relative flex items-center">
+                    <Mail className="w-4 h-4 text-zinc-400 absolute left-4 pointer-events-none" />
+                    <input
+                      type="email"
+                      value={clientEmailInput}
+                      onChange={(e) => setClientEmailInput(e.target.value)}
+                      placeholder="e.g. client@yourcompany.com"
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-11 pr-4 py-3 font-sans text-xs text-zinc-900 placeholder:text-zinc-400 focus:bg-white transition-all outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSaveClientSettings}
+                      disabled={savingClientSettings}
+                      className="flex-grow sm:flex-grow-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-zinc-950 text-white hover:bg-zinc-800 font-sans font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                    >
+                      {savingClientSettings ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>Save Settings</span>
+                    </button>
+
+                    {portal.client_email && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteClientEmail}
+                        disabled={savingClientSettings}
+                        className="p-3 text-zinc-400 hover:text-red-600 hover:bg-red-50 border border-zinc-200 rounded-2xl transition-colors cursor-pointer"
+                        title="Remove Email Address"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <p className="font-sans text-[11px] text-zinc-400 mt-1">
+                  ✨ When you enter your email and click <strong className="text-zinc-700">Save Settings</strong>, an instant welcome onboarding email with your private portal access link will be delivered to your inbox.
+                </p>
+              </div>
+
+              {/* Specific Notification Event Checkboxes */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
+                <span className="font-sans font-bold text-xs text-zinc-900 uppercase tracking-wider">
+                  Notification Subscriptions
+                </span>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="p-4 rounded-2xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!clientNotifPrefs.milestones}
+                      onChange={(e) => setClientNotifPrefs(prev => ({ ...prev, milestones: e.target.checked }))}
+                      className="mt-0.5 accent-zinc-950 rounded"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-sans font-bold text-xs text-zinc-950">Milestone Roadmap</span>
+                      <span className="font-sans text-[11px] text-zinc-400 leading-snug">
+                        Updates when milestone phases advance or complete.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className="p-4 rounded-2xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!clientNotifPrefs.presentations}
+                      onChange={(e) => setClientNotifPrefs(prev => ({ ...prev, presentations: e.target.checked }))}
+                      className="mt-0.5 accent-zinc-950 rounded"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-sans font-bold text-xs text-zinc-950">Presentation Proofs</span>
+                      <span className="font-sans text-[11px] text-zinc-400 leading-snug">
+                        Notifications when new concepts are ready for review.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className="p-4 rounded-2xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-50 hover:border-zinc-300 transition-all flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!clientNotifPrefs.files}
+                      onChange={(e) => setClientNotifPrefs(prev => ({ ...prev, files: e.target.checked }))}
+                      className="mt-0.5 accent-zinc-950 rounded"
+                    />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-sans font-bold text-xs text-zinc-950">Final Deliverables</span>
+                      <span className="font-sans text-[11px] text-zinc-400 leading-snug">
+                        Alerts when download files & font packages are released.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
             </div>
           </section>
         )}

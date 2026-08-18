@@ -583,3 +583,161 @@ ${comment}
       : undefined,
   });
 }
+
+/**
+ * 4. Client Portal Welcome / Onboarding Notification Email
+ */
+export function getPortalOnboardingWelcomeEmailHtml({
+  clientName,
+  projectTitle,
+  portalUrl,
+  notificationEmail,
+}: {
+  clientName: string;
+  projectTitle: string;
+  portalUrl: string;
+  notificationEmail: string;
+}) {
+  const content = `
+    <!-- Onboarding Information Card -->
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 16px 0 20px 0; background-color: #f8f8fa; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden;">
+      <tr>
+        <td style="padding: 16px 20px; border-bottom: 1px solid #eeeeef;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Client & Project Workspace
+          </span>
+          <span style="font-size: 16px; font-weight: 700; color: #09090b;">
+            ${clientName} &bull; ${projectTitle}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 16px 20px;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Active Notification Email
+          </span>
+          <span style="font-size: 14px; font-weight: 600; color: #27272a;">
+            ${notificationEmail}
+          </span>
+        </td>
+      </tr>
+    </table>
+
+    <div style="margin: 18px 0; font-size: 14px; line-height: 1.65; color: #3f3f46;">
+      <p style="margin: 0 0 12px 0;">
+        Welcome to your private client portal. You will receive automatic real-time notifications whenever new design presentations, roadmap milestone updates, or downloadable project deliverables are released.
+      </p>
+      <p style="margin: 0; color: #71717a; font-size: 13px;">
+        Tip: Bookmark your private portal link below for quick access to your roadmap and design assets anytime.
+      </p>
+    </div>
+  `;
+
+  return wrapEmailLayout({
+    previewText: `✨ Welcome to your private project portal for ${projectTitle}`,
+    badgeText: "Portal Connected",
+    badgeBg: "#ecfdf5",
+    badgeTextColor: "#047857",
+    title: "Client Portal Connected",
+    subtitle: `Your notification email is now configured for <strong style="color: #09090b;">${projectTitle}</strong>.`,
+    children: content,
+    actionButton: {
+      text: "Access Private Client Portal",
+      url: portalUrl,
+    },
+  });
+}
+
+/**
+ * 5. Designer & Studio Update Notification (Milestones, Decks, Assets)
+ */
+export function getPortalClientNotificationEmailHtml({
+  clientName,
+  projectTitle,
+  type,
+  headline,
+  message,
+  portalUrl,
+  presentationUrl,
+}: {
+  clientName: string;
+  projectTitle: string;
+  type: "presentation_ready" | "milestone_update" | "files_released" | "custom_message";
+  headline: string;
+  message?: string;
+  portalUrl: string;
+  presentationUrl?: string;
+}) {
+  const badgeMap = {
+    presentation_ready: { text: "Designs Ready for Review", bg: "#fef3c7", color: "#92400e" },
+    milestone_update: { text: "Milestone Update", bg: "#dbeafe", color: "#1e40af" },
+    files_released: { text: "Deliverables Released", bg: "#ecfdf5", color: "#047857" },
+    custom_message: { text: "Studio Update", bg: "#f4f4f5", color: "#18181b" },
+  };
+
+  const currentBadge = badgeMap[type] || badgeMap.custom_message;
+
+  const content = `
+    <!-- Project Card -->
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 16px 0 20px 0; background-color: #f8f8fa; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden;">
+      <tr>
+        <td style="padding: 16px 20px; border-bottom: 1px solid #eeeeef;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Project Workspace
+          </span>
+          <span style="font-size: 16px; font-weight: 700; color: #09090b;">
+            ${clientName} &bull; ${projectTitle}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 16px 20px;">
+          <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px;">
+            Update Details
+          </span>
+          <span style="font-size: 15px; font-weight: 600; color: #18181b;">
+            ${headline}
+          </span>
+        </td>
+      </tr>
+    </table>
+
+    ${
+      message && message.trim()
+        ? `
+    <!-- Designer Note -->
+    <div style="margin: 18px 0;">
+      <span style="font-size: 11px; font-weight: 700; color: #8c8c94; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">
+        Message from TY Studio
+      </span>
+      <div style="background-color: #fafafc; border-left: 3px solid #09090b; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 12px 12px 0; padding: 16px 18px; font-size: 14px; line-height: 1.65; color: #18181b; white-space: pre-wrap;">
+${message}
+      </div>
+    </div>
+    `
+        : ""
+    }
+  `;
+
+  const targetUrl = presentationUrl || portalUrl;
+  const buttonText = type === "presentation_ready" 
+    ? "Review Presentation Deck" 
+    : type === "files_released" 
+    ? "Download Asset Deliverables" 
+    : "View Project Portal";
+
+  return wrapEmailLayout({
+    previewText: `🔔 ${headline} - ${projectTitle}`,
+    badgeText: currentBadge.text,
+    badgeBg: currentBadge.bg,
+    badgeTextColor: currentBadge.color,
+    title: headline,
+    subtitle: `New update available for your project <strong style="color: #09090b;">${projectTitle}</strong>.`,
+    children: content,
+    actionButton: {
+      text: buttonText,
+      url: targetUrl,
+    },
+  });
+}
+
