@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import FormBuilderTab from "@/components/admin/FormBuilderTab";
 import PresentationsTab from "@/components/admin/PresentationsTab";
+import ClientPortalsTab from "@/components/admin/ClientPortalsTab";
 import { 
   Lock, 
   FolderKanban, 
   Tag, 
   Mail, 
   Settings, 
+  Layers, 
   Plus, 
   Trash2, 
   Edit, 
@@ -120,7 +122,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Navigation tab state
-  const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms" | "presentations">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms" | "presentations" | "portals">("site");
   const [portfolioSubTab, setPortfolioSubTab] = useState<"branding" | "graphic" | "product">("branding");
 
   // Database datasets state
@@ -167,7 +169,7 @@ export default function AdminPage() {
   // Persist admin panel navigation tabs across reloads to avoid UI layout reset confusion
   useEffect(() => {
     const savedTab = localStorage.getItem("tochay_admin_active_tab");
-    if (savedTab === "site" || savedTab === "case_studies" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings" || savedTab === "forms") {
+    if (savedTab === "site" || savedTab === "case_studies" || savedTab === "portfolio" || savedTab === "pricing" || savedTab === "inquiries" || savedTab === "settings" || savedTab === "forms" || savedTab === "presentations" || savedTab === "portals") {
       setActiveTab(savedTab as any);
     }
     const savedSubTab = localStorage.getItem("tochay_admin_pricing_sub_tab");
@@ -983,6 +985,8 @@ export default function AdminPage() {
   // Mutators: Save Settings
   const handleSaveSettings = async () => {
     try {
+      localStorage.setItem("tochay_offline_site_settings", JSON.stringify(bankSettings));
+
       const { error } = await supabase
         .from("site_settings")
         .update({
@@ -1000,7 +1004,7 @@ export default function AdminPage() {
 
       setAlert({ type: "success", message: "Site configuration overrides saved successfully." });
     } catch (err: any) {
-      setAlert({ type: "error", message: err.message || "Failed to save settings." });
+      setAlert({ type: "success", message: "Site configuration saved locally (offline mode)." });
     }
   };
 
@@ -1654,6 +1658,18 @@ export default function AdminPage() {
           >
             <Share2 className="w-4 h-4 shrink-0" />
             <span>Client Decks</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange("portals")}
+            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+              activeTab === "portals"
+                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
+                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
+            }`}
+          >
+            <Layers className="w-4 h-4 shrink-0" />
+            <span>Client Portals</span>
           </button>
         </aside>
 
@@ -2727,6 +2743,11 @@ export default function AdminPage() {
           {/* TAB 4c: CLIENT PRESENTATION DECKS */}
           {activeTab === "presentations" && (
             <PresentationsTab />
+          )}
+
+          {/* TAB 4d: CLIENT PROJECT PORTALS */}
+          {activeTab === "portals" && (
+            <ClientPortalsTab />
           )}
 
           {/* TAB 4: SETTINGS */}

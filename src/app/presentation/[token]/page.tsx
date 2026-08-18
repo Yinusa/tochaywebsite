@@ -400,16 +400,13 @@ export default function ClientShowcasePage() {
   const activeAsset = activeAssetIdx !== null ? filteredAssets[activeAssetIdx] : null;
 
   return (
-    <main className="w-full min-h-screen bg-[#f8f8f7] flex flex-col justify-between font-sans relative overflow-hidden">
+    <main className="w-full min-h-screen bg-[#f8f8f7] flex flex-col justify-between font-sans relative">
       
-      {/* Dynamic graphic client background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(9,9,11,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] select-none pointer-events-none z-0" />
-
       {/* Dynamic Navigation Header */}
       <Navbar />
 
       {/* Main Core View Area */}
-      <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 pt-36 pb-20 flex-grow flex flex-col gap-8 z-10">
+      <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 pt-36 pb-20 flex-grow flex flex-col gap-8">
         
         {/* Page Title & Client Metadata */}
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-200/80 pb-8 gap-6 select-none">
@@ -578,15 +575,32 @@ export default function ClientShowcasePage() {
               </div>
             )}
 
-            {/* Floating exit fullscreen button */}
+            {/* Floating fullscreen top controls: Review toggle + Direct Close button */}
             {isFullscreenMedia && (
-              <button
-                onClick={() => setIsFullscreenMedia(false)}
-                className="absolute top-6 right-6 p-3 bg-zinc-900/80 border border-zinc-800 text-white rounded-full hover:bg-zinc-800 hover:scale-105 transition-all cursor-pointer z-50 shadow-2xl"
-                title="Exit fullscreen review"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFullscreenMedia(false);
+                  }}
+                  className="px-3.5 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white rounded-full transition-all cursor-pointer shadow-2xl flex items-center gap-1.5 text-xs font-sans font-bold backdrop-blur-md"
+                  title="Switch to split review mode"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Feedback & Approvals</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveAssetIdx(null);
+                  }}
+                  className="p-2.5 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white rounded-full hover:scale-105 transition-all cursor-pointer shadow-2xl backdrop-blur-md"
+                  title="Close Reviewer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             )}
 
             {/* Main view frame viewport */}

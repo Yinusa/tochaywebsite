@@ -209,25 +209,48 @@ html.lenis body {
   z-index: 10;
 }
 
+/* Global Outline & Focus Reset */
+input, textarea, select, button {
+  outline: none !important;
+}
+input:focus, textarea:focus, select:focus, button:focus {
+  outline: none !important;
+}
+
 /* Input Fields overrides */
 .tochay-admin select,
-.tochay-admin input[type="text"],
-.tochay-admin input[type="email"],
-.tochay-admin input[type="password"],
-.tochay-admin input[type="number"],
-.tochay-admin textarea {
+.tochay-admin input[type="text"]:not(.border-0):not(.border-none):not(.bg-transparent),
+.tochay-admin input[type="email"]:not(.border-0):not(.border-none):not(.bg-transparent),
+.tochay-admin input[type="password"]:not(.border-0):not(.border-none):not(.bg-transparent),
+.tochay-admin input[type="number"]:not(.border-0):not(.border-none):not(.bg-transparent),
+.tochay-admin textarea:not(.border-0):not(.border-none):not(.bg-transparent) {
   background-color: rgba(255, 255, 255, 0.8) !important;
   border: 1px solid rgba(228, 228, 231, 0.8) !important;
   color: #09090b !important;
   transition: all 0.2s ease-in-out !important;
+  outline: none !important;
 }
 
 .tochay-admin select:focus,
-.tochay-admin input:focus,
-.tochay-admin textarea:focus {
-  border-color: #09090b !important;
+.tochay-admin input:not(.border-0):not(.border-none):not(.bg-transparent):focus,
+.tochay-admin textarea:not(.border-0):not(.border-none):not(.bg-transparent):focus {
+  border-color: #d4d4d8 !important;
   background-color: #ffffff !important;
-  box-shadow: 0 0 0 1px #09090b !important;
+  box-shadow: 0 0 0 2px rgba(24, 24, 27, 0.05) !important;
+  outline: none !important;
+}
+
+/* Seamless / Borderless Inputs in Admin */
+.tochay-admin input.border-0,
+.tochay-admin input.border-none,
+.tochay-admin input.bg-transparent,
+.tochay-admin textarea.border-0,
+.tochay-admin textarea.border-none,
+.tochay-admin textarea.bg-transparent {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
 }
 
 /* Inner block containers (Image upload boxes, positions managers) */
