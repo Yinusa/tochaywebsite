@@ -15,6 +15,7 @@ import {
   Loader2, 
   ArrowUp, 
   ArrowDown, 
+  ArrowLeft,
   Share2, 
   Clock, 
   FileText,
@@ -34,7 +35,8 @@ import {
   Bell,
   Send,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  GripVertical
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -153,6 +155,9 @@ export default function ClientPortalsTab() {
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [portalUploadProgress, setPortalUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [draggedPhaseIdx, setDraggedPhaseIdx] = useState<number | null>(null);
+  const [dragOverPhaseIdx, setDragOverPhaseIdx] = useState<number | null>(null);
 
   // Quick Client Notify Modal State
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
@@ -528,6 +533,22 @@ export default function ClientPortalsTab() {
     setPortalPhases(reindexed);
   };
 
+  const handleDragDropPhase = (targetIdx: number) => {
+    if (draggedPhaseIdx === null || draggedPhaseIdx === targetIdx) {
+      setDraggedPhaseIdx(null);
+      setDragOverPhaseIdx(null);
+      return;
+    }
+    setPortalPhases(prev => {
+      const copy = [...prev];
+      const item = copy.splice(draggedPhaseIdx, 1)[0];
+      copy.splice(targetIdx, 0, item);
+      return copy.map((p, idx) => ({ ...p, sort_order: idx }));
+    });
+    setDraggedPhaseIdx(null);
+    setDragOverPhaseIdx(null);
+  };
+
   const handleUpdatePhase = (index: number, field: keyof PortalPhaseItem, value: any) => {
     const updated = [...portalPhases];
     updated[index] = {
@@ -738,7 +759,8 @@ export default function ClientPortalsTab() {
 
     try {
       setUploadingFile(true);
-      const newItems: PortalFileItem[] = [];
+      setPortalUploadProgress({ current: 0, total: files.length });
+      let successCount = 0;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -768,22 +790,27 @@ export default function ClientPortalsTab() {
           ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
           : `${sizeKb} KB`;
 
-        newItems.push({
+        const newItem: PortalFileItem = {
           filename: file.name,
           file_url: fileUrl,
           category: newFileCategory,
           file_size: formattedSize,
           created_at: new Date().toISOString()
-        });
+        };
+
+        // Real-time render: Immediately append as each file finishes!
+        setPortalFiles(prev => [...prev, newItem]);
+        successCount++;
+        setPortalUploadProgress({ current: i + 1, total: files.length });
       }
 
-      setPortalFiles(prev => [...prev, ...newItems]);
-      setAlert({ type: "success", message: `Added ${newItems.length} deliverable file(s).` });
+      setAlert({ type: "success", message: `Added ${successCount} deliverable file(s).` });
     } catch (err: any) {
       console.error("File upload error:", err);
       setAlert({ type: "error", message: "Failed to upload file(s)." });
     } finally {
       setUploadingFile(false);
+      setPortalUploadProgress(null);
     }
   };
 
@@ -1128,7 +1155,7 @@ export default function ClientPortalsTab() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {filteredPortals.map((portal) => {
             const completedPhases = (portal.phases || []).filter(p => p.status === "completed").length;
             const totalPhases = (portal.phases || []).length;
@@ -1271,35 +1298,59 @@ export default function ClientPortalsTab() {
         </div>
       )}
 
-      {/* CREATE / EDIT PORTAL MODAL */}
+      {/* FULL-PAGE CLIENT PORTAL EDITOR */}
       {showModal && editingPortal && (
-        <div className="fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden animate-in fade-in duration-200">
-            
-            {/* Modal Header */}
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between gap-4 bg-zinc-50/50">
-              <div>
-                <h3 className="font-sans font-bold text-lg text-zinc-950">
-                  {editingPortal.id ? `Edit Portal: ${editingPortal.client_name}` : "Create Client Project Portal"}
-                </h3>
-                <p className="font-sans font-normal text-zinc-400 text-xs mt-0.5">
-                  Configure project milestones, versioned presentations, and downloadable deliverable assets.
-                </p>
+        <div data-lenis-prevent className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none">
+          
+          {/* Top Sticky Header & Navigation Tabs Bar */}
+          <header className="w-full border-b border-zinc-200 bg-white/95 backdrop-blur-md select-none sticky top-0 z-50 shadow-2xs">
+            <div className="px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Portals</span>
+                </button>
+
+                <div className="flex flex-col">
+                  <h2 className="font-sans font-bold text-sm sm:text-base text-zinc-950">
+                    {editingPortal.id ? `Edit Portal: ${editingPortal.client_name}` : "Create Client Project Portal"}
+                  </h2>
+                  <span className="hidden sm:inline font-sans text-[11px] text-zinc-400">
+                    Configure project milestones, versioned presentations, and downloadable deliverable assets
+                  </span>
+                </div>
               </div>
 
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-950 hover:bg-zinc-200 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 font-sans font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePortal}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-sans font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Client Portal</span>
+                </button>
+              </div>
             </div>
 
-            {/* Modal Nav Tabs */}
-            <div className="flex items-center gap-2 px-6 pt-3 border-b border-zinc-100 bg-white">
+            {/* Sub-Header Tabs */}
+            <div className="flex items-center gap-2 px-4 sm:px-8 border-t border-zinc-100 overflow-x-auto scrollbar-none">
               <button
+                type="button"
                 onClick={() => setActiveModalTab("details")}
-                className={`pb-3 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer ${
                   activeModalTab === "details"
                     ? "border-zinc-950 text-zinc-950"
                     : "border-transparent text-zinc-400 hover:text-zinc-600"
@@ -1309,8 +1360,9 @@ export default function ClientPortalsTab() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveModalTab("roadmap")}
-                className={`pb-3 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`py-2.5 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeModalTab === "roadmap"
                     ? "border-zinc-950 text-zinc-950"
                     : "border-transparent text-zinc-400 hover:text-zinc-600"
@@ -1323,8 +1375,9 @@ export default function ClientPortalsTab() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveModalTab("files")}
-                className={`pb-3 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`py-2.5 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeModalTab === "files"
                     ? "border-zinc-950 text-zinc-950"
                     : "border-transparent text-zinc-400 hover:text-zinc-600"
@@ -1337,8 +1390,9 @@ export default function ClientPortalsTab() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveModalTab("financials")}
-                className={`pb-3 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 font-sans font-bold text-xs border-b-2 transition-all cursor-pointer ${
                   activeModalTab === "financials"
                     ? "border-zinc-950 text-zinc-950"
                     : "border-transparent text-zinc-400 hover:text-zinc-600"
@@ -1347,9 +1401,11 @@ export default function ClientPortalsTab() {
                 4. Financials & Invoice
               </button>
             </div>
+          </header>
 
-            {/* Modal Body Scroll Container */}
-            <div className="p-6 overflow-y-auto flex-grow max-h-[62vh] space-y-6">
+          {/* Full Page Body */}
+          <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs space-y-6">
               
               {/* TAB 1: PROJECT DETAILS */}
               {activeModalTab === "details" && (
@@ -1485,9 +1541,33 @@ export default function ClientPortalsTab() {
 
                       return (
                         <div
-                          key={idx}
-                          className={`border rounded-2xl p-4.5 transition-all flex flex-col gap-3.5 ${
-                            isActive
+                          key={phase.id || idx}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", `${idx}`);
+                            setDraggedPhaseIdx(idx);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverPhaseIdx(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverPhaseIdx === idx) setDragOverPhaseIdx(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleDragDropPhase(idx);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedPhaseIdx(null);
+                            setDragOverPhaseIdx(null);
+                          }}
+                          className={`border rounded-2xl p-4.5 transition-all flex flex-col gap-3.5 select-none ${
+                            draggedPhaseIdx === idx
+                              ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                              : dragOverPhaseIdx === idx
+                              ? "border-zinc-950 bg-zinc-100 shadow-sm scale-101"
+                              : isActive
                               ? "border-zinc-950 bg-zinc-50/50 shadow-xs"
                               : isCompleted
                               ? "border-emerald-200 bg-emerald-50/20"
@@ -1497,6 +1577,11 @@ export default function ClientPortalsTab() {
                           {/* Phase Header: Title, Order & Status Selector */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-100">
                             <div className="flex items-center gap-2 flex-grow">
+                              {/* Drag Grip */}
+                              <div className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-700 shrink-0 p-0.5" title="Drag to reorder">
+                                <GripVertical className="w-4 h-4" />
+                              </div>
+
                               <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-200 text-zinc-800 shrink-0">
                                 Phase {idx + 1}
                               </span>
@@ -2113,8 +2198,8 @@ export default function ClientPortalsTab() {
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-5 border-t border-zinc-100 flex items-center justify-between gap-4 bg-zinc-50/50">
+            {/* Bottom Sticky Action Bar */}
+            <div className="p-6 mt-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -2127,7 +2212,7 @@ export default function ClientPortalsTab() {
                 type="button"
                 onClick={handleSavePortal}
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-sans font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-sans font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 <span>Save Client Portal</span>

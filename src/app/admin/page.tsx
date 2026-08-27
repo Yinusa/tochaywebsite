@@ -33,11 +33,17 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
+  ArrowLeft,
   BookOpen,
   Share2,
   CheckCheck,
   MailOpen,
-  Reply
+  Reply,
+  Menu,
+  PanelLeft,
+  PanelLeftClose,
+  LayoutGrid,
+  GripVertical
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -121,9 +127,11 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Navigation tab state
+  // Navigation tab & drawer state
   const [activeTab, setActiveTab] = useState<"site" | "case_studies" | "portfolio" | "pricing" | "inquiries" | "settings" | "forms" | "presentations" | "portals">("site");
   const [portfolioSubTab, setPortfolioSubTab] = useState<"branding" | "graphic" | "product">("branding");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Database datasets state
   const [projects, setProjects] = useState<ProjectItem[]>([]);
@@ -135,8 +143,16 @@ export default function AdminPage() {
   const [showcaseImages, setShowcaseImages] = useState<{ id: string; url_path: string; position: number }[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [heroUploadProgress, setHeroUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [projectUploading, setProjectUploading] = useState(false);
+  const [projectUploadProgress, setProjectUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [projectShowcaseImages, setProjectShowcaseImages] = useState<any[]>([]);
+  const [draggedHeroShowcaseIdx, setDraggedHeroShowcaseIdx] = useState<number | null>(null);
+  const [dragOverHeroShowcaseIdx, setDragOverHeroShowcaseIdx] = useState<number | null>(null);
+  const [draggedProjectShowcaseIdx, setDraggedProjectShowcaseIdx] = useState<number | null>(null);
+  const [dragOverProjectShowcaseIdx, setDragOverProjectShowcaseIdx] = useState<number | null>(null);
+  const [draggedProjectIdx, setDraggedProjectIdx] = useState<number | null>(null);
+  const [dragOverProjectIdx, setDragOverProjectIdx] = useState<number | null>(null);
   const [isProjectsOrderDirty, setIsProjectsOrderDirty] = useState(false);
   const [bankSettings, setBankSettings] = useState({
     id: "",
@@ -702,6 +718,23 @@ export default function AdminPage() {
     setIsProjectsOrderDirty(true);
   };
 
+  const handleDragDropProject = (targetIdx: number) => {
+    if (draggedProjectIdx === null || draggedProjectIdx === targetIdx) {
+      setDraggedProjectIdx(null);
+      setDragOverProjectIdx(null);
+      return;
+    }
+    setProjects(prev => {
+      const copy = [...prev];
+      const item = copy.splice(draggedProjectIdx, 1)[0];
+      copy.splice(targetIdx, 0, item);
+      return copy;
+    });
+    setIsProjectsOrderDirty(true);
+    setDraggedProjectIdx(null);
+    setDragOverProjectIdx(null);
+  };
+
   const handleSaveProjectsOrder = async () => {
     try {
       setUploading(true);
@@ -1059,6 +1092,22 @@ export default function AdminPage() {
     });
   };
 
+  const handleDragDropHeroShowcase = (targetIdx: number) => {
+    if (draggedHeroShowcaseIdx === null || draggedHeroShowcaseIdx === targetIdx) {
+      setDraggedHeroShowcaseIdx(null);
+      setDragOverHeroShowcaseIdx(null);
+      return;
+    }
+    setShowcaseImages(prev => {
+      const copy = [...prev];
+      const item = copy.splice(draggedHeroShowcaseIdx, 1)[0];
+      copy.splice(targetIdx, 0, item);
+      return copy.map((img, idx) => ({ ...img, position: idx + 1 }));
+    });
+    setDraggedHeroShowcaseIdx(null);
+    setDragOverHeroShowcaseIdx(null);
+  };
+
   // Client-side image compressor before base64 conversion (limits resolution and quota bloat)
   const compressImage = (file: File, maxWidth = 1200, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -1187,12 +1236,13 @@ export default function AdminPage() {
     setUploading(false);
   };
 
-  // Image Upload helper
+  // Image Upload helper (Real-time incremental append)
   const uploadShowcaseFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    setHeroUploadProgress({ current: 0, total: files.length });
     let successCount = 0;
 
     for (let i = 0; i < files.length; i++) {
@@ -1228,24 +1278,27 @@ export default function AdminPage() {
         console.warn("Storage upload threw exception, falling back to Base64:", storageErr);
       }
 
-      if (uploadedUrl) {
-        handleAddShowcaseImage(uploadedUrl);
-        successCount++;
-      } else {
+      if (!uploadedUrl) {
         // 2. Base64 database storage fallback (with client-side image compression)
         try {
-          const base64String = await compressImage(file, 1200, 0.7);
-          handleAddShowcaseImage(base64String);
-          successCount++;
+          uploadedUrl = await compressImage(file, 1200, 0.7);
         } catch (base64Err) {
           console.error("Compression fallback failed:", base64Err);
         }
       }
+
+      if (uploadedUrl) {
+        // Real-time render: Immediately append as each image finishes loading
+        handleAddShowcaseImage(uploadedUrl);
+        successCount++;
+      }
+      setHeroUploadProgress({ current: i + 1, total: files.length });
     }
 
     setUploading(false);
+    setHeroUploadProgress(null);
     if (successCount > 0) {
-      setAlert({ type: "success", message: `Added ${successCount} image(s) to local workspace layout.` });
+      setAlert({ type: "success", message: `Added ${successCount} image(s) to hero slideshow layout.` });
     }
   };
 
@@ -1304,12 +1357,13 @@ export default function AdminPage() {
     }
   };
 
-  // Showcase Gallery upload files
+  // Showcase Gallery upload files (Real-time incremental append)
   const handleUploadShowcaseBlockFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setProjectUploading(true);
+    setProjectUploadProgress({ current: 0, total: files.length });
     let successCount = 0;
 
     for (let i = 0; i < files.length; i++) {
@@ -1360,12 +1414,15 @@ export default function AdminPage() {
           block_type: "before", // default placement position: before the story
           display_order: projectShowcaseImages.length + successCount + 1
         };
+        // Real-time render: Immediately append to state as soon as each image finishes!
         setProjectShowcaseImages(prev => [...prev, newBlock]);
         successCount++;
       }
+      setProjectUploadProgress({ current: i + 1, total: files.length });
     }
 
     setProjectUploading(false);
+    setProjectUploadProgress(null);
     if (successCount > 0) {
       setAlert({ type: "success", message: `Successfully uploaded ${successCount} showcase image(s).` });
     }
@@ -1388,6 +1445,22 @@ export default function AdminPage() {
       // Reassign display_order indexes
       return copy.map((block, index) => ({ ...block, display_order: index + 1 }));
     });
+  };
+
+  const handleDragDropProjectShowcase = (targetIdx: number) => {
+    if (draggedProjectShowcaseIdx === null || draggedProjectShowcaseIdx === targetIdx) {
+      setDraggedProjectShowcaseIdx(null);
+      setDragOverProjectShowcaseIdx(null);
+      return;
+    }
+    setProjectShowcaseImages(prev => {
+      const copy = [...prev];
+      const item = copy.splice(draggedProjectShowcaseIdx, 1)[0];
+      copy.splice(targetIdx, 0, item);
+      return copy.map((block, index) => ({ ...block, display_order: index + 1 }));
+    });
+    setDraggedProjectShowcaseIdx(null);
+    setDragOverProjectShowcaseIdx(null);
   };
 
   const handleDeleteShowcaseBlock = async (idx: number) => {
@@ -1500,9 +1573,33 @@ export default function AdminPage() {
     );
   }
 
+  // Admin Tabs Definition
+  const ADMIN_TABS = [
+    { id: "site" as const, label: "Site Controls", icon: Eye },
+    { id: "case_studies" as const, label: "Case Studies", icon: BookOpen },
+    { id: "portfolio" as const, label: "Portfolio", icon: FolderKanban },
+    { id: "pricing" as const, label: "Rates & Pricing", icon: Tag },
+    { 
+      id: "inquiries" as const, 
+      label: "Contact Inquiries", 
+      icon: Mail, 
+      badge: inquiries.filter(i => !i.is_read).length > 0 
+        ? `${inquiries.filter(i => !i.is_read).length} new` 
+        : inquiries.length > 0 ? `${inquiries.length}` : null,
+      badgeHighlight: inquiries.some(i => !i.is_read)
+    },
+    { id: "forms" as const, label: "Custom Forms", icon: FileText },
+    { id: "settings" as const, label: "Settings & Coupons", icon: Settings },
+    { id: "presentations" as const, label: "Client Decks", icon: Share2 },
+    { id: "portals" as const, label: "Client Portals", icon: Layers }
+  ];
+
+  const currentTabObj = ADMIN_TABS.find(t => t.id === activeTab) || ADMIN_TABS[0];
+  const CurrentTabIcon = currentTabObj.icon;
+
   // Render Dashboard Workspace
   return (
-    <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans relative tochay-admin tochay-admin-grid">
+    <main data-lenis-prevent className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans relative tochay-admin tochay-admin-grid">
       
       {/* Absolute alert banner */}
       {alert && (
@@ -1517,164 +1614,231 @@ export default function AdminPage() {
       )}
 
       {/* Admin Top Dashboard Bar */}
-      <header className="w-full border-b border-zinc-200 bg-white px-6 py-4 flex items-center justify-between select-none">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/images/toflogoblack.png"
-            alt="TY Logo"
-            width={28}
-            height={28}
-            className="w-auto h-7 object-contain"
-          />
-          <div className="flex flex-col">
-            <span className="font-sans font-bold text-sm tracking-tight text-zinc-950">TY STUDIO</span>
-            <span className="font-mono text-[8px] font-semibold text-zinc-400 uppercase tracking-widest">
-              Control Panel
-            </span>
+      <header className="w-full border-b border-zinc-200 bg-white px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between select-none sticky top-0 z-50 shadow-2xs">
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Hamburger / Sidebar Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                setIsMobileDrawerOpen(true);
+              } else {
+                setIsSidebarOpen(!isSidebarOpen);
+              }
+            }}
+            className="p-2 -ml-1 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer flex items-center justify-center"
+            title={isSidebarOpen ? "Collapse Navigation" : "Expand Navigation"}
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-3">
+            <Image
+              src="/images/toflogoblack.png"
+              alt="TY Logo"
+              width={26}
+              height={26}
+              className="w-auto h-6 sm:h-7 object-contain"
+            />
+            <div className="flex flex-col">
+              <span className="font-sans font-black text-xs sm:text-sm tracking-tight text-zinc-950">TY STUDIO</span>
+              <span className="font-mono text-[8px] font-semibold text-zinc-400 uppercase tracking-widest leading-none">
+                Control Panel
+              </span>
+            </div>
+          </div>
+
+          {/* Current Active Tab Breadcrumb Badge */}
+          <div className="hidden sm:flex items-center gap-1.5 ml-2 pl-3 border-l border-zinc-200">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 font-sans font-bold text-xs text-zinc-900">
+              <CurrentTabIcon className="w-3.5 h-3.5 text-zinc-500" />
+              <span>{currentTabObj.label}</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <span className="font-mono text-[10px] text-zinc-400 font-semibold bg-zinc-50 border border-zinc-100 px-3 py-1 rounded-full shrink-0">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <span className="hidden sm:inline-block font-mono text-[10px] text-zinc-400 font-semibold bg-zinc-50 border border-zinc-100 px-3 py-1 rounded-full shrink-0">
             {timeStr}
           </span>
+
           <button
             onClick={handleLogout}
-            className="group flex items-center gap-2 font-sans font-bold text-xs text-zinc-500 hover:text-red-600 transition-colors duration-300 cursor-pointer"
+            className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl hover:bg-red-50 font-sans font-bold text-xs text-zinc-500 hover:text-red-600 transition-all cursor-pointer"
           >
-            <span>Exit Session</span>
+            <span className="hidden xs:inline">Exit Session</span>
             <LogOut className="w-3.5 h-3.5 text-zinc-400 group-hover:text-red-600 transition-colors" />
           </button>
         </div>
       </header>
 
-      {/* Main Admin Sidebar & Tab content block */}
-      <div className="flex flex-col md:flex-row flex-grow w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 py-10 gap-8">
-        
-        {/* Navigation Sidebar */}
-        <aside className="w-full md:w-64 flex flex-row md:flex-col gap-2 shrink-0 select-none overflow-x-auto pb-4 md:pb-0 scrollbar-none">
-          <button
-            onClick={() => handleTabChange("site")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "site"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Eye className="w-4 h-4 shrink-0" />
-            <span>Site Controls</span>
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("case_studies")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "case_studies"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Case Studies</span>
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("portfolio")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "portfolio"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <FolderKanban className="w-4 h-4 shrink-0" />
-            <span>Portfolio</span>
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("pricing")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "pricing"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Tag className="w-4 h-4 shrink-0" />
-            <span>Rates & Pricing</span>
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("inquiries")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "inquiries"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Mail className="w-4 h-4 shrink-0" />
-            <span>Contact Inquiries</span>
-            {inquiries.length > 0 && (
-              <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                inquiries.some(i => !i.is_read)
-                  ? "bg-[#ffd230] text-zinc-950"
-                  : activeTab === "inquiries" ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-500"
-              } ml-auto shrink-0`}>
-                {inquiries.filter(i => !i.is_read).length > 0
-                  ? `${inquiries.filter(i => !i.is_read).length} new`
-                  : inquiries.length}
+      {/* Mobile/Tablet Horizontal Swipeable Tab Bar */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto scrollbar-none px-4 py-2.5 bg-white border-b border-zinc-200/80 select-none w-full shrink-0">
+        {ADMIN_TABS.map((tab) => {
+          const TabIcon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-3 py-1.5 rounded-full font-sans font-bold text-xs tracking-tight transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap border ${
+                isActive
+                  ? "bg-zinc-950 text-white border-zinc-950 shadow-xs"
+                  : "bg-zinc-50/80 text-zinc-600 hover:text-zinc-950 border-zinc-200/80 hover:bg-zinc-100"
+              }`}
+            >
+              <TabIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className={`font-mono text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                  tab.badgeHighlight
+                    ? "bg-[#ffd230] text-zinc-950"
+                    : isActive ? "bg-zinc-800 text-zinc-300" : "bg-zinc-200 text-zinc-700"
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile Slide-over Drawer Modal */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden bg-black/60 backdrop-blur-xs animate-fade-in select-none">
+          <div className="w-[85%] max-w-xs bg-white h-full shadow-2xl flex flex-col justify-between p-6 border-r border-zinc-200 animate-slide-in-left">
+            
+            {/* Top Bar */}
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+                <div className="flex items-center gap-2.5">
+                  <Image
+                    src="/images/toflogoblack.png"
+                    alt="TY Logo"
+                    width={26}
+                    height={26}
+                    className="w-auto h-6 object-contain"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-sans font-bold text-xs tracking-tight text-zinc-950">TY STUDIO</span>
+                    <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-widest">Navigation</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-none pr-1">
+                {ADMIN_TABS.map((tab) => {
+                  const TabIcon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        handleTabChange(tab.id);
+                        setIsMobileDrawerOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl flex items-center justify-between font-sans font-bold text-xs tracking-tight transition-all cursor-pointer border ${
+                        isActive
+                          ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
+                          : "bg-white text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <TabIcon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-400"}`} />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.badge && (
+                        <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                          tab.badgeHighlight
+                            ? "bg-[#ffd230] text-zinc-950"
+                            : isActive ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-500"
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Footer */}
+            <div className="pt-4 border-t border-zinc-100 flex flex-col gap-3">
+              <span className="font-mono text-[10px] text-zinc-400 text-center">
+                {timeStr}
               </span>
-            )}
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("forms")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "forms"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <FileText className="w-4 h-4 shrink-0" />
-            <span>Custom Forms</span>
-          </button>
- 
-          <button
-            onClick={() => handleTabChange("settings")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "settings"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Settings className="w-4 h-4 shrink-0" />
-            <span>Settings & Coupons</span>
-          </button>
+              <button
+                onClick={handleLogout}
+                className="w-full py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 font-sans font-bold text-xs flex items-center justify-center gap-2 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Exit Session</span>
+              </button>
+            </div>
 
-          <button
-            onClick={() => handleTabChange("presentations")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "presentations"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Share2 className="w-4 h-4 shrink-0" />
-            <span>Client Decks</span>
-          </button>
+          </div>
 
-          <button
-            onClick={() => handleTabChange("portals")}
-            className={`w-full px-5 py-3 rounded-xl flex items-center gap-3 font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
-              activeTab === "portals"
-                ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
-                : "bg-white text-zinc-500 hover:text-zinc-900 border-zinc-200"
-            }`}
-          >
-            <Layers className="w-4 h-4 shrink-0" />
-            <span>Client Portals</span>
-          </button>
+          {/* Click outside backdrop to close */}
+          <div 
+            className="flex-grow h-full cursor-pointer" 
+            onClick={() => setIsMobileDrawerOpen(false)} 
+          />
+        </div>
+      )}
+
+      {/* Full-Screen Main Admin Workspace */}
+      <div className="flex-grow w-full flex p-3 sm:p-5 lg:p-6 gap-5 lg:gap-6 max-w-none">
+        
+        {/* Desktop Collapsible Sidebar */}
+        <aside
+          className={`hidden lg:flex flex-col gap-1.5 shrink-0 select-none transition-all duration-300 ease-in-out ${
+            isSidebarOpen ? "w-60 xl:w-64 opacity-100" : "w-0 opacity-0 overflow-hidden pointer-events-none -ml-6"
+          }`}
+        >
+          <div className="sticky top-20 flex flex-col gap-1.5 bg-white/70 backdrop-blur-md p-2.5 rounded-3xl border border-zinc-200/80 shadow-2xs">
+            {ADMIN_TABS.map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`w-full px-4 py-2.5 rounded-2xl flex items-center justify-between font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+                    isActive
+                      ? "bg-zinc-950 text-white border-zinc-950 shadow-xs font-bold"
+                      : "bg-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/70 border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <TabIcon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-400"}`} />
+                    <span>{tab.label}</span>
+                  </div>
+                  {tab.badge && (
+                    <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      tab.badgeHighlight
+                        ? "bg-[#ffd230] text-zinc-950"
+                        : isActive ? "bg-zinc-800 text-zinc-300" : "bg-zinc-100 text-zinc-500"
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </aside>
 
-        {/* Central Workspace Tab Body */}
-        <section className="flex-grow bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-xs min-h-[500px]">
+        {/* Central Workspace Tab Body - Edge-to-Edge Full Screen Responsive */}
+        <section className="flex-grow w-full bg-white border border-zinc-200/90 rounded-3xl p-5 sm:p-7 lg:p-9 shadow-xs min-h-[calc(100vh-120px)] overflow-x-hidden">
           
           {/* TAB 0: SITE CONTROLS */}
           {activeTab === "site" && (
@@ -1792,9 +1956,17 @@ export default function AdminPage() {
 
                 {/* Current showcase list layout */}
                 <div className="flex flex-col gap-3">
-                  <span className="font-sans font-semibold text-xs text-zinc-400 uppercase tracking-wider pl-0.5 select-none">
-                    Current Setup
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-sans font-semibold text-xs text-zinc-400 uppercase tracking-wider pl-0.5 select-none">
+                      Current Setup ({showcaseImages.length} Slides) — Drag or use arrows to reorder
+                    </span>
+                    {heroUploadProgress && (
+                      <span className="font-sans font-bold text-[10px] text-amber-600 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Uploading {heroUploadProgress.current} of {heroUploadProgress.total}...</span>
+                      </span>
+                    )}
+                  </div>
                   {showcaseImages.length === 0 ? (
                     <div className="w-full border border-dashed border-zinc-200 rounded-2xl py-12 flex flex-col items-center justify-center text-center select-none">
                       <AlertCircle className="w-8 h-8 text-zinc-300 mb-2" />
@@ -1804,10 +1976,41 @@ export default function AdminPage() {
                     <div className="flex flex-col gap-3">
                       {showcaseImages.map((img, idx) => (
                         <div
-                          key={img.id}
-                          className="border border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          key={img.id || idx}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", `${idx}`);
+                            setDraggedHeroShowcaseIdx(idx);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverHeroShowcaseIdx(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverHeroShowcaseIdx === idx) setDragOverHeroShowcaseIdx(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleDragDropHeroShowcase(idx);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedHeroShowcaseIdx(null);
+                            setDragOverHeroShowcaseIdx(null);
+                          }}
+                          className={`border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all cursor-grab active:cursor-grabbing select-none ${
+                            draggedHeroShowcaseIdx === idx
+                              ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                              : dragOverHeroShowcaseIdx === idx
+                              ? "border-zinc-950 bg-zinc-100 shadow-sm scale-101"
+                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                          }`}
                         >
-                          <div className="flex items-center gap-4 flex-grow min-w-0">
+                          <div className="flex items-center gap-3.5 flex-grow min-w-0">
+                            {/* Drag Grip Handle */}
+                            <div className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-700 shrink-0 p-0.5" title="Drag to reorder">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+
                             <div className="relative w-24 h-14 bg-zinc-100 rounded-lg overflow-hidden border border-zinc-100 shrink-0 select-none">
                               <img
                                 src={img.url_path}
@@ -1962,7 +2165,33 @@ export default function AdminPage() {
                     .map(({ project, index }) => (
                       <div
                         key={project.id}
-                        className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", `${index}`);
+                          setDraggedProjectIdx(index);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOverProjectIdx(index);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverProjectIdx === index) setDragOverProjectIdx(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDragDropProject(index);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedProjectIdx(null);
+                          setDragOverProjectIdx(null);
+                        }}
+                        className={`border rounded-2xl p-4 flex items-start gap-4 transition-all duration-200 cursor-grab active:cursor-grabbing select-none ${
+                          draggedProjectIdx === index
+                            ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                            : dragOverProjectIdx === index
+                            ? "border-zinc-950 bg-zinc-100 shadow-md scale-[1.01]"
+                            : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-md"
+                        }`}
                       >
                         <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0 select-none">
                           <img
@@ -2149,7 +2378,33 @@ export default function AdminPage() {
                     .map(({ project, index }) => (
                       <div
                         key={project.id}
-                        className="border border-zinc-200 rounded-2xl p-4 flex items-start gap-4 hover:shadow-md transition-all duration-300"
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", `${index}`);
+                          setDraggedProjectIdx(index);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOverProjectIdx(index);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverProjectIdx === index) setDragOverProjectIdx(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDragDropProject(index);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedProjectIdx(null);
+                          setDragOverProjectIdx(null);
+                        }}
+                        className={`border rounded-2xl p-4 flex items-start gap-4 transition-all duration-200 cursor-grab active:cursor-grabbing select-none ${
+                          draggedProjectIdx === index
+                            ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                            : dragOverProjectIdx === index
+                            ? "border-zinc-950 bg-zinc-100 shadow-md scale-[1.01]"
+                            : "border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-md"
+                        }`}
                       >
                         <div className="relative w-16 h-20 rounded-lg overflow-hidden bg-zinc-100 shrink-0 select-none">
                           <img
@@ -2855,50 +3110,73 @@ export default function AdminPage() {
       </div>
 
       {/* FOOTER */}
-      <footer className="w-full border-t border-zinc-200 bg-white py-6 select-none mt-10">
-        <div className="w-full max-w-7xl mx-auto px-6 sm:px-8 md:px-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="w-full border-t border-zinc-200/80 bg-white py-5 select-none mt-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <span className="font-sans font-bold text-xs text-zinc-400">
-            TY STUDIO WORKSPACE © {new Date().getFullYear()}
+            TY STUDIO CONTROL PANEL &bull; {new Date().getFullYear()}
           </span>
-          <span className="font-sans font-normal text-[10px] text-zinc-400">
-            Engineered with Supabase + Next.js Server Client
+          <span className="font-sans font-normal text-[11px] text-zinc-400">
+            Connected to Supabase Live Database
           </span>
         </div>
       </footer>
 
-      {/* PORTFOLIO PROJECT SLIDE OVER DIALOG MODAL */}
+      {/* FULL-PAGE PORTFOLIO PROJECT / CASE STUDY EDITOR */}
       {showProjectModal && editingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 select-none">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => {
-              setShowProjectModal(false);
-              setEditingProject(null);
-            }}
-          />
-          <div 
-            data-lenis-prevent
-            className="relative w-full max-w-5xl bg-[#f8f8f7] h-[90vh] md:h-[85vh] rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in overflow-hidden border border-zinc-200/50"
-          >
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
-              <h3 className="font-sans font-bold text-lg text-zinc-950">
-                {editingProject.id 
-                  ? (editingProject.is_case_study ? "Edit Case Study" : "Edit Project")
-                  : (editingProject.is_case_study ? "Create Case Study" : "Create Project")}
-              </h3>
-              <button 
+        <div data-lenis-prevent className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none">
+          {/* Top Sticky Header Bar */}
+          <header className="w-full border-b border-zinc-200 bg-white px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between select-none sticky top-0 z-50 shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button
+                type="button"
                 onClick={() => {
                   setShowProjectModal(false);
                   setEditingProject(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-950 focus:outline-hidden cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Admin</span>
               </button>
+
+              <div className="flex flex-col">
+                <h2 className="font-sans font-bold text-sm sm:text-base text-zinc-950">
+                  {editingProject.id 
+                    ? (editingProject.is_case_study ? `Edit Case Study: ${editingProject.title || "Untitled"}` : `Edit Project: ${editingProject.title || "Untitled"}`)
+                    : (editingProject.is_case_study ? "Create New Case Study" : "Create New Project")}
+                </h2>
+                <span className="hidden sm:inline font-sans text-[11px] text-zinc-400">
+                  Configure project metadata, narrative case study story, and showcase media
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 md:p-8 flex-grow overflow-y-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProjectModal(false);
+                  setEditingProject(null);
+                }}
+                className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 font-sans font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProject}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white font-sans font-bold text-xs transition-all shadow-xs cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>{editingProject.is_case_study ? "Save Case Study" : "Save Project"}</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Full-Page Content Body */}
+          <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
                 
                 {/* Column 1: Core Details */}
                 <div className="flex flex-col gap-4">
@@ -2953,15 +3231,8 @@ export default function AdminPage() {
                         className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                       >
                         <option value="BRAND DESIGN">BRAND DESIGN</option>
-                        <option value="BRAND SYSTEM">BRAND SYSTEM</option>
-                        <option value="PACKAGING">PACKAGING</option>
-                        <option value="MOTION">MOTION</option>
-                        <option value="IDENTITY">IDENTITY</option>
-                        <option value="ART DIRECTION">ART DIRECTION</option>
-                        <option value="VISUAL SYSTEM">VISUAL SYSTEM</option>
                         <option value="GRAPHIC DESIGN">GRAPHIC DESIGN</option>
                         <option value="PRODUCT DESIGN">PRODUCT DESIGN</option>
-                        <option value="UI/UX">UI/UX</option>
                       </select>
                     </div>
 
@@ -2972,7 +3243,7 @@ export default function AdminPage() {
                       <input
                         type="text"
                         placeholder="e.g. Consumer Tech"
-                        value={editingProject.industry}
+                        value={editingProject.industry || ""}
                         onChange={(e) => setEditingProject({ ...editingProject, industry: e.target.value })}
                         className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                       />
@@ -2987,7 +3258,7 @@ export default function AdminPage() {
                       <input
                         type="text"
                         placeholder="e.g. Design System, Code"
-                        value={editingProject.program}
+                        value={editingProject.program || ""}
                         onChange={(e) => setEditingProject({ ...editingProject, program: e.target.value })}
                         className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                       />
@@ -2999,8 +3270,8 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Established"
-                        value={editingProject.stage}
+                        placeholder="e.g. Growth, Established"
+                        value={editingProject.stage || ""}
                         onChange={(e) => setEditingProject({ ...editingProject, stage: e.target.value })}
                         className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                       />
@@ -3008,18 +3279,71 @@ export default function AdminPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                      Cover Image Path / Upload
+                    <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5 select-none">
+                      Cover Image
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="e.g. /images/grit1.jpg"
-                        value={editingProject.image}
-                        onChange={(e) => setEditingProject({ ...editingProject, image: e.target.value })}
-                        className="flex-grow bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                      />
-                      <div className="relative shrink-0 select-none">
+
+                    {editingProject.image ? (
+                      <div className="flex items-center justify-between p-2.5 bg-zinc-50 border border-zinc-200 rounded-2xl gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-grow">
+                          <div className="w-16 h-12 rounded-xl bg-zinc-200 overflow-hidden border border-zinc-200/80 shrink-0 select-none">
+                            <img
+                              src={editingProject.image}
+                              alt="Cover preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as any).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200";
+                              }}
+                            />
+                          </div>
+                          <div className="flex flex-col min-w-0 flex-grow">
+                            <span className="font-sans font-bold text-xs text-zinc-950 truncate" title={editingProject.image}>
+                              {editingProject.image.startsWith("data:") 
+                                ? `Custom Upload (${Math.round((editingProject.image.length * 3) / 4 / 1024)} KB)` 
+                                : editingProject.image.split("/").pop() || "Cover Image"}
+                            </span>
+                            <span className="font-sans text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                              <Check className="w-3 h-3" />
+                              <span>Cover Active</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 select-none">
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={uploadProjectCoverFile}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              disabled={projectUploading}
+                            />
+                            <button
+                              type="button"
+                              disabled={projectUploading}
+                              className="px-3 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-800 rounded-xl text-xs font-sans font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-3xs"
+                            >
+                              {projectUploading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Change</span>
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingProject({ ...editingProject, image: "", cover_image_url: "" })}
+                            className="p-1.5 text-zinc-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Remove Cover Image"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative w-full border border-dashed border-zinc-200 hover:border-zinc-400 rounded-2xl p-4 flex items-center justify-between gap-3 bg-zinc-50/50 hover:bg-zinc-50 transition-colors">
                         <input
                           type="file"
                           accept="image/*"
@@ -3027,171 +3351,243 @@ export default function AdminPage() {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           disabled={projectUploading}
                         />
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400">
+                            <Upload className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-sans font-bold text-xs text-zinc-950">Upload Cover Image</span>
+                            <span className="font-sans text-[10px] text-zinc-400">PNG, JPG, or WebP (Recommended 16:9 ratio)</span>
+                          </div>
+                        </div>
                         <button
                           type="button"
                           disabled={projectUploading}
-                          className="px-4 py-2.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                          className="px-3.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl text-xs font-sans font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                         >
-                          {projectUploading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Upload className="w-4 h-4" />
-                          )}
+                          {projectUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Select File</span>
                         </button>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Feature Settings Toggles */}
-                  <div className="grid grid-cols-2 gap-4 border border-zinc-200 bg-white/40 rounded-2xl p-4 my-2 select-none">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!editingProject.has_details}
-                        onChange={(e) => setEditingProject({ ...editingProject, has_details: e.target.checked })}
-                        className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Enable Details Page</span>
-                        <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Allows click to view designs</span>
-                      </div>
+                  {/* Case study checkbox */}
+                  <div className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="is_case_study"
+                      checked={!!editingProject.is_case_study}
+                      onChange={(e) => setEditingProject({ ...editingProject, is_case_study: e.target.checked })}
+                      className="rounded border-zinc-300 text-zinc-950 focus:ring-zinc-950 w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="is_case_study" className="font-sans font-bold text-xs text-zinc-950 cursor-pointer">
+                      Show in Case Studies Page
                     </label>
+                  </div>
 
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!editingProject.is_case_study}
-                        onChange={(e) => setEditingProject({ ...editingProject, is_case_study: e.target.checked })}
-                        className="w-4 h-4 text-zinc-950 border-zinc-300 rounded-sm focus:ring-zinc-500 cursor-pointer"
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-sans font-bold text-xs text-zinc-950 leading-tight">Show in Case Studies</span>
-                        <span className="font-sans font-normal text-[9px] text-zinc-400 leading-normal">Features in homepage Case Studies swiper</span>
-                      </div>
-                    </label>
+                  {/* Enable Details Page Toggle */}
+                  <div className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="has_details"
+                      checked={!!editingProject.has_details}
+                      onChange={(e) => setEditingProject({ ...editingProject, has_details: e.target.checked })}
+                      className="rounded border-zinc-300 text-zinc-950 focus:ring-zinc-950 w-4 h-4 cursor-pointer"
+                    />
+                    <div className="flex flex-col cursor-pointer" onClick={() => setEditingProject({ ...editingProject, has_details: !editingProject.has_details })}>
+                      <label htmlFor="has_details" className="font-sans font-bold text-xs text-zinc-950 cursor-pointer">
+                        Enable Detailed Case Study Page
+                      </label>
+                      <span className="font-sans font-normal text-[10px] text-zinc-400">
+                        When enabled, clicking this project card navigates to <code className="bg-zinc-200/60 px-1 py-0.5 rounded text-[9px]">/projects/{editingProject.slug || "slug"}</code>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Column 2: Narrative Details */}
+                {/* Column 2: Detailed Narrative & Media */}
                 <div className="flex flex-col gap-4">
                   {editingProject.has_details ? (
                     <>
                       <div className="flex flex-col gap-1">
                         <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                          Subtitle (Tagline)
+                          Detail Subtitle / Overview Tagline
                         </label>
                         <input
                           type="text"
-                          placeholder="Acoustic engineering met by pure..."
-                          value={editingProject.subtitle || editingProject.tagline || ""}
-                          onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value, tagline: e.target.value })}
+                          placeholder="e.g. An audio identity created for clarity, space, and emotion."
+                          value={editingProject.subtitle || ""}
+                          onChange={(e) => setEditingProject({ ...editingProject, subtitle: e.target.value })}
                           className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                         />
                       </div>
 
                       <div className="flex flex-col gap-1">
                         <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                          Summary Text (About Brief)
+                          Brief Summary Narrative (Left Column)
                         </label>
                         <textarea
                           rows={3}
-                          placeholder="Founded to challenge how we perceive auditory clarity..."
-                          value={editingProject.summary_text || editingProject.about || ""}
-                          onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value, about: e.target.value })}
+                          placeholder="Short summary paragraph that introduces the challenge and scope..."
+                          value={editingProject.summary_text || ""}
+                          onChange={(e) => setEditingProject({ ...editingProject, summary_text: e.target.value })}
                           className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
                         />
                       </div>
 
                       <div className="flex flex-col gap-1">
                         <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                          Full Case Study Story Text
+                          Full Story Narrative (Right Column)
                         </label>
                         <textarea
-                          rows={4}
-                          placeholder="The complete detailed story text of this project case study..."
+                          rows={5}
+                          placeholder="Detailed case study breakdown, process narrative, design decisions..."
                           value={editingProject.full_text || ""}
                           onChange={(e) => setEditingProject({ ...editingProject, full_text: e.target.value })}
-                          className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none leading-relaxed"
+                          className="w-full bg-white border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-normal outline-hidden text-zinc-950 resize-none"
                         />
                       </div>
 
-                      {/* Showcase Images Manager */}
-                      <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
-                        <div className="flex items-center justify-between select-none">
+                      {/* Showcase Gallery Images */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
                           <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
-                            Showcase Gallery Blocks
+                            Showcase Gallery Images ({projectShowcaseImages.length}) — Drag or use arrows
                           </label>
-                          <div className="relative cursor-pointer">
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              onChange={handleUploadShowcaseBlockFiles}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                              disabled={projectUploading}
-                            />
-                            <button
-                              type="button"
-                              disabled={projectUploading}
-                              className="px-3 py-1.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-lg font-sans font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Add Images</span>
-                            </button>
+                          <div className="flex items-center gap-2">
+                            {projectUploadProgress && (
+                              <span className="font-sans font-bold text-[10px] text-amber-600 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <span>Uploading {projectUploadProgress.current} of {projectUploadProgress.total}...</span>
+                              </span>
+                            )}
+                            <div className="relative">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleUploadShowcaseBlockFiles}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                disabled={projectUploading}
+                              />
+                              <button
+                                type="button"
+                                disabled={projectUploading}
+                                className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-sans font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                              >
+                                {projectUploading ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Plus className="w-3.5 h-3.5" />
+                                )}
+                                <span>Upload Showcase Images</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
                         {projectShowcaseImages.length === 0 ? (
-                          <div className="border border-dashed border-zinc-200 rounded-2xl py-8 flex flex-col items-center justify-center text-center select-none bg-white/40">
-                            <Upload className="w-6 h-6 text-zinc-200 mb-2" />
-                            <span className="font-sans font-bold text-zinc-400 text-[10px]">No gallery blocks uploaded</span>
-                            <p className="font-sans text-[9px] text-zinc-400 mt-0.5 max-w-[200px]">Upload images and set their block display types.</p>
+                          <div className="w-full border border-dashed border-zinc-200 rounded-xl py-6 flex flex-col items-center justify-center text-center select-none bg-zinc-50/50">
+                            <span className="font-sans text-xs text-zinc-400">No showcase images added yet.</span>
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1">
-                            {projectShowcaseImages.map((img, idx) => (
+                          <div className="flex flex-col gap-2 max-h-[540px] overflow-y-auto pr-1">
+                            {projectShowcaseImages.map((item, idx) => (
                               <div
-                                key={img.id || idx}
-                                className="flex items-center justify-between border border-zinc-100 bg-white/40 rounded-xl p-2.5 gap-3 shadow-2xs group"
+                                key={item.id || idx}
+                                draggable={true}
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData("text/plain", `${idx}`);
+                                  setDraggedProjectShowcaseIdx(idx);
+                                }}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  setDragOverProjectShowcaseIdx(idx);
+                                }}
+                                onDragLeave={() => {
+                                  if (dragOverProjectShowcaseIdx === idx) setDragOverProjectShowcaseIdx(null);
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  handleDragDropProjectShowcase(idx);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedProjectShowcaseIdx(null);
+                                  setDragOverProjectShowcaseIdx(null);
+                                }}
+                                className={`flex items-center justify-between p-2.5 rounded-xl gap-3 transition-all cursor-grab active:cursor-grabbing select-none ${
+                                  draggedProjectShowcaseIdx === idx
+                                    ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                                    : dragOverProjectShowcaseIdx === idx
+                                    ? "border-zinc-950 bg-zinc-100 shadow-sm scale-101"
+                                    : "bg-zinc-50 border border-zinc-200 hover:border-zinc-300"
+                                }`}
                               >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200/50 overflow-hidden shrink-0 select-none">
-                                    <img src={img.image_url} alt="Block" className="w-full h-full object-cover" />
+                                <div className="flex items-center gap-2.5 min-w-0 flex-grow">
+                                  {/* Drag Handle */}
+                                  <div className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-700 shrink-0 p-0.5" title="Drag to reorder">
+                                    <GripVertical className="w-4 h-4" />
                                   </div>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-mono text-[8px] text-zinc-400 uppercase tracking-wide">Placement Position</span>
-                                    <select
-                                      value={img.block_type || "before"}
-                                      onChange={(e) => handleUpdateBlockType(idx, e.target.value as any)}
-                                      className="bg-transparent border-none p-0 pr-6 text-zinc-950 font-sans font-bold text-xs focus:ring-0 cursor-pointer outline-hidden select-none"
-                                    >
-                                      <option value="before">Before the Story Text</option>
-                                      <option value="after">After the Story Text</option>
-                                    </select>
+
+                                  <span className="font-mono text-xs text-zinc-400 font-bold w-4 text-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <div className="w-14 h-9 bg-zinc-200 rounded-lg overflow-hidden shrink-0 border border-zinc-200">
+                                    <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="flex flex-col gap-1 min-w-0 flex-grow">
+                                    <span className="font-mono text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Placement</span>
+                                    <div className="inline-flex items-center bg-zinc-200/60 p-0.5 rounded-lg border border-zinc-200/80 w-fit">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateBlockType(idx, "before")}
+                                        className={`px-2.5 py-0.5 rounded-md font-sans font-bold text-[10px] transition-all cursor-pointer ${
+                                          item.block_type === "before" || !item.block_type
+                                            ? "bg-white text-zinc-950 shadow-3xs border border-zinc-200/60"
+                                            : "text-zinc-500 hover:text-zinc-900"
+                                        }`}
+                                      >
+                                        Before Story
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateBlockType(idx, "after")}
+                                        className={`px-2.5 py-0.5 rounded-md font-sans font-bold text-[10px] transition-all cursor-pointer ${
+                                          item.block_type === "after"
+                                            ? "bg-white text-zinc-950 shadow-3xs border border-zinc-200/60"
+                                            : "text-zinc-500 hover:text-zinc-900"
+                                        }`}
+                                      >
+                                        After Story
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
-
-                                <div className="flex items-center gap-2 select-none shrink-0">
+                                <div className="flex items-center gap-1 shrink-0">
                                   <button
                                     type="button"
-                                    onClick={() => moveBlockOrder(idx, "up")}
                                     disabled={idx === 0}
-                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                                    onClick={() => moveBlockOrder(idx, "up")}
+                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer"
+                                    title="Move Up"
                                   >
                                     <ArrowUp className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => moveBlockOrder(idx, "down")}
                                     disabled={idx === projectShowcaseImages.length - 1}
-                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer hover:bg-zinc-100 rounded-md"
+                                    onClick={() => moveBlockOrder(idx, "down")}
+                                    className="p-1 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 cursor-pointer"
+                                    title="Move Down"
                                   >
                                     <ArrowDown className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteShowcaseBlock(idx)}
-                                    className="p-1 text-zinc-350 hover:text-red-600 cursor-pointer hover:bg-red-50 rounded-md"
+                                    className="p-1 text-zinc-400 hover:text-red-600 cursor-pointer"
+                                    title="Remove"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -3207,7 +3603,7 @@ export default function AdminPage() {
                       <FileText className="w-8 h-8 text-zinc-350 mb-2" />
                       <span className="font-sans font-bold text-zinc-400 text-xs">Narrative Details Disabled</span>
                       <p className="font-sans text-[10px] text-zinc-400 max-w-xs mt-1 leading-normal">
-                        Toggle "Enable Details Page" on the left column to configure subtitles, case study story text, and gallery images.
+                        Toggle "Enable Detailed Case Study Page" on the left column to configure subtitles, case study story text, and gallery images.
                       </p>
                     </div>
                   )}
@@ -3215,59 +3611,63 @@ export default function AdminPage() {
 
               </div>
             </div>
-
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none bg-white/50 backdrop-blur-md">
-              <button
-                onClick={() => {
-                  setShowProjectModal(false);
-                  setEditingProject(null);
-                }}
-                className="px-4 py-2 border border-zinc-200 text-zinc-500 hover:text-zinc-950 rounded-full font-sans font-semibold text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProject}
-                className="px-5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
-              >
-                <Save className="w-4 h-4" />
-                <span>
-                  {editingProject.is_case_study ? "Save Case Study" : "Save Project"}
-                </span>
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* PROMO COUPON DIALOG MODAL */}
+      {/* PROMO COUPON FULL PAGE OVERLAY */}
       {showCouponModal && editingCoupon && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => {
-              setShowCouponModal(false);
-              setEditingCoupon(null);
-            }}
-          />
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in">
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
-              <h3 className="font-sans font-bold text-lg text-zinc-950">
-                {editingCoupon.id ? "Edit Coupon" : "Create Coupon"}
-              </h3>
-              <button 
+        <div className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none" data-lenis-prevent>
+          <header className="sticky top-0 z-50 bg-white border-b border-zinc-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <button
+                type="button"
                 onClick={() => {
                   setShowCouponModal(false);
                   setEditingCoupon(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-950 focus:outline-hidden cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer shrink-0"
+                title="Back to pricing"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Pricing</span>
               </button>
+              <div className="h-4 w-px bg-zinc-200 hidden sm:block shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-sans font-bold text-sm sm:text-base text-zinc-950 truncate">
+                  {editingCoupon.id ? "Edit Promo Coupon" : "Create Promo Coupon"}
+                </span>
+                <span className="font-sans text-[11px] text-zinc-400 truncate">
+                  {editingCoupon.code || "New Code"}
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCouponModal(false);
+                  setEditingCoupon(null);
+                }}
+                className="px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl font-sans font-semibold text-xs transition-all cursor-pointer hidden xs:inline-flex"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCoupon}
+                className="px-4.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Coupon</span>
+              </button>
+            </div>
+          </header>
+
+          <div className="w-full max-w-xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Coupon Code
                 </label>
@@ -3281,7 +3681,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Discount Type
                 </label>
@@ -3295,7 +3695,7 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Override Value
                 </label>
@@ -3309,7 +3709,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Expiration Date
                 </label>
@@ -3321,69 +3721,92 @@ export default function AdminPage() {
                 />
               </div>
             </div>
-
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
-              <button
-                onClick={() => {
-                  setShowCouponModal(false);
-                  setEditingCoupon(null);
-                }}
-                className="px-4 py-2 border border-zinc-200 text-zinc-500 hover:text-zinc-950 rounded-full font-sans font-semibold text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveCoupon}
-                className="px-5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Coupon</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* PACKAGE INCLUSIONS DIALOG MODAL */}
+      {/* PACKAGE INCLUSIONS FULL PAGE OVERLAY */}
       {showInclusionsModal && inclusionsCardId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => {
-              setShowInclusionsModal(false);
-              setInclusionsCardId(null);
-              setSelectedServiceToAdd("");
-            }}
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in max-h-[85vh]">
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
-              <div className="flex flex-col">
-                <h3 className="font-sans font-bold text-lg text-zinc-950">
-                  Manage Package Items
-                </h3>
-                <span className="font-sans text-xs text-zinc-400">
-                  {cards.find(c => c.id === inclusionsCardId)?.name}
-                </span>
-              </div>
-              <button 
+        <div className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none" data-lenis-prevent>
+          <header className="sticky top-0 z-50 bg-white border-b border-zinc-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <button
+                type="button"
                 onClick={() => {
                   setShowInclusionsModal(false);
                   setInclusionsCardId(null);
                   setSelectedServiceToAdd("");
                 }}
-                className="text-zinc-400 hover:text-zinc-950 focus:outline-hidden cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer shrink-0"
+                title="Back to pricing"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Packages</span>
               </button>
+              <div className="h-4 w-px bg-zinc-200 hidden sm:block shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-sans font-bold text-sm sm:text-base text-zinc-950 truncate">
+                  Manage Package Items & Inclusions
+                </span>
+                <span className="font-sans text-[11px] text-zinc-400 truncate">
+                  {cards.find(c => c.id === inclusionsCardId)?.name}
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 flex-grow overflow-y-auto flex flex-col gap-6">
+            <button
+              type="button"
+              onClick={() => {
+                setShowInclusionsModal(false);
+                setInclusionsCardId(null);
+                setSelectedServiceToAdd("");
+              }}
+              className="px-4.5 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl font-sans font-bold text-xs transition-all cursor-pointer shadow-xs"
+            >
+              Done Managing
+            </button>
+          </header>
+
+          <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              {/* Add New Inclusion Panel */}
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl flex flex-col gap-3">
+                <span className="font-sans font-bold text-xs text-zinc-950 select-none">Add Deliverable / Master Service To Package:</span>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <select
+                    value={selectedServiceToAdd}
+                    onChange={(e) => setSelectedServiceToAdd(e.target.value)}
+                    className="flex-grow bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2.5 px-3 text-xs font-sans font-semibold outline-hidden text-zinc-950"
+                  >
+                    <option value="">-- Select a Master Service --</option>
+                    {services
+                      .filter(s => !cardServiceItems.some(item => item.card_id === inclusionsCardId && item.service_id === s.id))
+                      .map(s => (
+                        <option key={s.id} value={s.id}>{s.name} (₦{Number(s.price).toLocaleString()})</option>
+                      ))
+                    }
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedServiceToAdd) return;
+                      handleAddInclusion(inclusionsCardId, selectedServiceToAdd);
+                      setSelectedServiceToAdd("");
+                    }}
+                    disabled={!selectedServiceToAdd}
+                    className="px-5 py-2.5 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-all disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                  >
+                    Add to Suite
+                  </button>
+                </div>
+              </div>
+
               {/* Current Inclusions List */}
-              <div className="flex flex-col gap-3">
-                <span className="font-sans font-bold text-xs text-zinc-950 select-none">Current Deliverables In Suite:</span>
+              <div className="flex flex-col gap-3 pt-2">
+                <span className="font-sans font-bold text-xs text-zinc-950 select-none">Current Deliverables in this Package Suite:</span>
                 {cardServiceItems.filter(item => item.card_id === inclusionsCardId).length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-zinc-200 rounded-2xl select-none">
-                    <span className="font-sans text-xs text-zinc-400 italic">No services mapped to this package card.</span>
+                  <div className="text-center py-10 border border-dashed border-zinc-200 rounded-2xl select-none">
+                    <span className="font-sans text-xs text-zinc-400 italic">No services mapped to this package card yet. Add one above.</span>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -3393,12 +3816,14 @@ export default function AdminPage() {
                         const baseName = item.master_services?.name || "Service Item";
                         const basePrice = item.master_services?.price || 0;
                         return (
-                          <div key={item.id} className="border border-zinc-200 rounded-xl p-4 flex flex-col gap-3 bg-zinc-50/30">
+                          <div key={item.id} className="border border-zinc-200 rounded-2xl p-4 flex flex-col gap-3 bg-zinc-50/40">
                             <div className="flex items-center justify-between select-none">
-                              <span className="font-sans font-bold text-xs text-zinc-950">{baseName} <span className="font-normal text-zinc-400">(Base: ₦{basePrice.toLocaleString()})</span></span>
+                              <span className="font-sans font-bold text-xs text-zinc-950">{baseName} <span className="font-normal text-zinc-400">(Base Master Rate: ₦{basePrice.toLocaleString()})</span></span>
                               <button
+                                type="button"
                                 onClick={() => handleRemoveInclusion(item.id)}
-                                className="text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
+                                className="text-zinc-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                                title="Remove item"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -3415,7 +3840,7 @@ export default function AdminPage() {
                                     const val = e.target.value;
                                     setCardServiceItems(prev => prev.map(x => x.id === item.id ? { ...x, custom_name: val } : x));
                                   }}
-                                  className="bg-white border border-zinc-200 focus:border-zinc-500 rounded-lg py-1.5 px-3 text-[11px] font-sans text-zinc-950 outline-hidden"
+                                  className="bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2 px-3 text-xs font-sans text-zinc-950 outline-hidden"
                                 />
                               </div>
                               <div className="flex flex-col gap-1">
@@ -3428,13 +3853,14 @@ export default function AdminPage() {
                                     const val = e.target.value ? Number(e.target.value) : null;
                                     setCardServiceItems(prev => prev.map(x => x.id === item.id ? { ...x, price_override: val } : x));
                                   }}
-                                  className="bg-white border border-zinc-200 focus:border-zinc-500 rounded-lg py-1.5 px-3 text-[11px] font-sans text-zinc-950 outline-hidden"
+                                  className="bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2 px-3 text-xs font-sans text-zinc-950 outline-hidden"
                                 />
                               </div>
                             </div>
                             <button
+                              type="button"
                               onClick={() => handleSaveInclusionOverride(item.id, item.custom_name || "", item.price_override !== undefined ? item.price_override : null)}
-                              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-sans font-semibold text-[10px] self-start transition-all cursor-pointer shadow-xs"
+                              className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-sans font-bold text-xs self-start transition-all cursor-pointer shadow-3xs"
                             >
                               Save Overrides
                             </button>
@@ -3444,83 +3870,64 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-
-              {/* Add New Inclusion Panel */}
-              <div className="border-t border-zinc-100 pt-5 flex flex-col gap-3">
-                <span className="font-sans font-bold text-xs text-zinc-950 select-none">Add Deliverable To Package:</span>
-                <div className="flex gap-3">
-                  <select
-                    value={selectedServiceToAdd}
-                    onChange={(e) => setSelectedServiceToAdd(e.target.value)}
-                    className="flex-grow bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2 px-3 text-xs font-sans font-semibold outline-hidden text-zinc-950"
-                  >
-                    <option value="">-- Select a Master Service --</option>
-                    {services
-                      .filter(s => !cardServiceItems.some(item => item.card_id === inclusionsCardId && item.service_id === s.id))
-                      .map(s => (
-                        <option key={s.id} value={s.id}>{s.name} (₦{Number(s.price).toLocaleString()})</option>
-                      ))
-                    }
-                  </select>
-                  <button
-                    onClick={() => {
-                      if (!selectedServiceToAdd) return;
-                      handleAddInclusion(inclusionsCardId, selectedServiceToAdd);
-                      setSelectedServiceToAdd("");
-                    }}
-                    disabled={!selectedServiceToAdd}
-                    className="px-4 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end select-none">
-              <button
-                onClick={() => {
-                  setShowInclusionsModal(false);
-                  setInclusionsCardId(null);
-                  setSelectedServiceToAdd("");
-                }}
-                className="px-5 py-2 bg-zinc-950 text-white rounded-full font-sans font-semibold text-xs cursor-pointer"
-              >
-                Close Panel
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* SUITE CARD DETAIL DIALOG MODAL */}
+      {/* SUITE CARD DETAIL FULL PAGE OVERLAY */}
       {showCardModal && editingCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => {
-              setShowCardModal(false);
-              setEditingCard(null);
-            }}
-          />
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in">
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
-              <h3 className="font-sans font-bold text-lg text-zinc-950">
-                {editingCard.id ? "Edit Package" : "Create Package"}
-              </h3>
-              <button 
+        <div className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none" data-lenis-prevent>
+          <header className="sticky top-0 z-50 bg-white border-b border-zinc-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <button
+                type="button"
                 onClick={() => {
                   setShowCardModal(false);
                   setEditingCard(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-950 focus:outline-hidden cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer shrink-0"
+                title="Back to pricing"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Packages</span>
               </button>
+              <div className="h-4 w-px bg-zinc-200 hidden sm:block shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-sans font-bold text-sm sm:text-base text-zinc-950 truncate">
+                  {editingCard.id ? "Edit Suite Package" : "Create Suite Package"}
+                </span>
+                <span className="font-sans text-[11px] text-zinc-400 truncate">
+                  {editingCard.name || "Untitled Package"}
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCardModal(false);
+                  setEditingCard(null);
+                }}
+                className="px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl font-sans font-semibold text-xs transition-all cursor-pointer hidden xs:inline-flex"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCard}
+                className="px-4.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Package</span>
+              </button>
+            </div>
+          </header>
+
+          <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Package Title
                 </label>
@@ -3535,7 +3942,7 @@ export default function AdminPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                     Category
                   </label>
@@ -3549,7 +3956,7 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                     Tier Level
                   </label>
@@ -3563,7 +3970,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Package Base Price (₦)
                 </label>
@@ -3577,7 +3984,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 mt-2 select-none">
+              <div className="flex items-center gap-2 pt-1 select-none">
                 <input
                   type="checkbox"
                   id="card_has_addons"
@@ -3591,7 +3998,7 @@ export default function AdminPage() {
               </div>
 
               {editingCard.has_addons && (
-                <div className="flex flex-col gap-1 mt-1">
+                <div className="flex flex-col gap-1.5 mt-1">
                   <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                     Add-on Price per Additional Inclusion (₦)
                   </label>
@@ -3605,57 +4012,63 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
-              <button
-                onClick={() => {
-                  setShowCardModal(false);
-                  setEditingCard(null);
-                }}
-                className="px-4 py-2 border border-zinc-200 text-zinc-500 hover:text-zinc-950 rounded-full font-sans font-semibold text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveCard}
-                className="px-5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Package</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* MASTER SERVICE DIALOG MODAL */}
+      {/* MASTER SERVICE FULL PAGE OVERLAY */}
       {showServiceModal && editingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => {
-              setShowServiceModal(false);
-              setEditingService(null);
-            }}
-          />
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col justify-between z-10 animate-scale-in">
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between select-none">
-              <h3 className="font-sans font-bold text-lg text-zinc-950">
-                {editingService.id ? "Edit Service" : "Create Service"}
-              </h3>
-              <button 
+        <div className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none" data-lenis-prevent>
+          <header className="sticky top-0 z-50 bg-white border-b border-zinc-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <button
+                type="button"
                 onClick={() => {
                   setShowServiceModal(false);
                   setEditingService(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-950 focus:outline-hidden cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer shrink-0"
+                title="Back to pricing"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Services</span>
               </button>
+              <div className="h-4 w-px bg-zinc-200 hidden sm:block shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-sans font-bold text-sm sm:text-base text-zinc-950 truncate">
+                  {editingService.id ? "Edit One-Off Service" : "Create One-Off Service"}
+                </span>
+                <span className="font-sans text-[11px] text-zinc-400 truncate">
+                  {editingService.name || "Untitled Service"}
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowServiceModal(false);
+                  setEditingService(null);
+                }}
+                className="px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-xl font-sans font-semibold text-xs transition-all cursor-pointer hidden xs:inline-flex"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveService}
+                className="px-4.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Service</span>
+              </button>
+            </div>
+          </header>
+
+          <div className="w-full max-w-xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Service Name
                 </label>
@@ -3669,7 +4082,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Description
                 </label>
@@ -3682,7 +4095,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                   Base Rate Price (₦)
                 </label>
@@ -3696,7 +4109,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 mt-2 select-none">
+              <div className="flex items-center gap-2 pt-1 select-none">
                 <input
                   type="checkbox"
                   id="service_has_addons"
@@ -3710,7 +4123,7 @@ export default function AdminPage() {
               </div>
 
               {editingService.has_addons && (
-                <div className="flex flex-col gap-1 mt-1">
+                <div className="flex flex-col gap-1.5 mt-1">
                   <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
                     Add-on Price per Additional Inclusion (₦)
                   </label>
@@ -3723,25 +4136,6 @@ export default function AdminPage() {
                   />
                 </div>
               )}
-            </div>
-
-            <div className="p-6 border-t border-zinc-100 flex items-center justify-end gap-3 select-none">
-              <button
-                onClick={() => {
-                  setShowServiceModal(false);
-                  setEditingService(null);
-                }}
-                className="px-4 py-2 border border-zinc-200 text-zinc-500 hover:text-zinc-950 rounded-full font-sans font-semibold text-xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveService}
-                className="px-5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-full font-sans font-semibold text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xs"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Service</span>
-              </button>
             </div>
           </div>
         </div>

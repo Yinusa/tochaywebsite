@@ -14,6 +14,8 @@ import {
   Loader2, 
   ArrowUp, 
   ArrowDown, 
+  ArrowLeft,
+  GripVertical,
   Share2, 
   Clock, 
   FileText,
@@ -61,6 +63,9 @@ export default function PresentationsTab() {
   const [categoryInput, setCategoryInput] = useState("");
   const [expiryDuration, setExpiryDuration] = useState<"1w" | "2w" | "1m" | "permanent">("1w");
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [draggedAssetIdx, setDraggedAssetIdx] = useState<number | null>(null);
+  const [dragOverAssetIdx, setDragOverAssetIdx] = useState<number | null>(null);
 
   // Load presentation data on mount
   useEffect(() => {
@@ -211,9 +216,10 @@ export default function PresentationsTab() {
   const handleUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !editingDeck || !editingDeck.id) return;
     const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     
     setUploading(true);
-    const newAssets: Partial<PresentationAsset>[] = [];
+    setUploadProgress({ current: 0, total: files.length });
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -242,7 +248,7 @@ export default function PresentationsTab() {
         });
       }
 
-      newAssets.push({
+      const newAsset: Partial<PresentationAsset> = {
         id: "asset-" + Math.random().toString(36).substring(2, 9),
         presentation_id: editingDeck.id,
         file_url: fileUrl,
@@ -250,11 +256,31 @@ export default function PresentationsTab() {
         category: editingDeck.categories?.[0] || "General",
         sort_order: deckAssets.length + i,
         status: "Review"
-      });
+      };
+
+      // Real-time render: Immediately append the uploaded asset as soon as it finishes!
+      setDeckAssets(prev => [...prev, newAsset]);
+      setUploadProgress({ current: i + 1, total: files.length });
     }
 
-    setDeckAssets([...deckAssets, ...newAssets]);
     setUploading(false);
+    setUploadProgress(null);
+  };
+
+  const handleDragDropAsset = (targetIdx: number) => {
+    if (draggedAssetIdx === null || draggedAssetIdx === targetIdx) {
+      setDraggedAssetIdx(null);
+      setDragOverAssetIdx(null);
+      return;
+    }
+    setDeckAssets(prev => {
+      const copy = [...prev];
+      const item = copy.splice(draggedAssetIdx, 1)[0];
+      copy.splice(targetIdx, 0, item);
+      return copy.map((asset, idx) => ({ ...asset, sort_order: idx }));
+    });
+    setDraggedAssetIdx(null);
+    setDragOverAssetIdx(null);
   };
 
   const moveAssetOrder = (index: number, direction: "up" | "down") => {
@@ -542,7 +568,7 @@ export default function PresentationsTab() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredDecks.map((deck) => (
             <div 
               key={deck.id}
@@ -624,30 +650,56 @@ export default function PresentationsTab() {
         </div>
       )}
 
-      {/* Create / Edit modal workspace */}
+      {/* FULL-PAGE PRESENTATION DECK EDITOR */}
       {showDeckModal && editingDeck && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/35 backdrop-blur-xs" onClick={() => setShowDeckModal(false)} />
-          <div className="relative w-full max-w-4xl bg-white border border-zinc-200/50 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto z-10 animate-scale-in">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-4 select-none">
-              <div className="flex items-center gap-2.5">
-                <Share2 className="w-5 h-5 text-zinc-950" />
-                <h3 className="font-sans font-bold text-lg text-zinc-950">
-                  {editingDeck.created_at ? "Modify Presentation Deck" : "Configure New Presentation"}
-                </h3>
-              </div>
-              <button 
+        <div data-lenis-prevent className="fixed inset-0 z-[70] bg-[#f8f8f7] text-[#09090b] flex flex-col font-sans overflow-y-auto animate-fade-in select-none">
+          
+          {/* Top Sticky Header Bar */}
+          <header className="w-full border-b border-zinc-200 bg-white px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between select-none sticky top-0 z-50 shadow-2xs">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button
+                type="button"
                 onClick={() => setShowDeckModal(false)}
-                className="p-2 hover:bg-zinc-100 rounded-full transition-all cursor-pointer text-zinc-400 hover:text-zinc-950"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 font-sans font-bold text-xs text-zinc-700 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Decks</span>
               </button>
+
+              <div className="flex flex-col">
+                <h2 className="font-sans font-bold text-sm sm:text-base text-zinc-950">
+                  {editingDeck.created_at ? `Modify Presentation: ${editingDeck.title || "Untitled"}` : "Configure New Presentation"}
+                </h2>
+                <span className="hidden sm:inline font-sans text-[11px] text-zinc-400">
+                  Setup client presentation slides, password access, and expiration controls
+                </span>
+              </div>
             </div>
 
-            {/* Modal Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeckModal(false)}
+                className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 font-sans font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDeck}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white font-sans font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{editingDeck.created_at ? "Update Presentation" : "Publish Presentation"}</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Full Page Body */}
+          <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
+            <div className="bg-white border border-zinc-200/90 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-8">
               
               {/* Form Settings column */}
               <div className="flex flex-col gap-4">
@@ -789,15 +841,25 @@ export default function PresentationsTab() {
 
                 {/* Upload assets list tracker */}
                 <div className="flex flex-col gap-2">
-                  <span className="font-sans font-bold text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5 select-none">
-                    Asset Sequencing ({deckAssets.length} Uploads)
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-sans font-bold text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5 select-none">
+                      Asset Sequencing ({deckAssets.length} Uploads) — Drag or use arrows to reorder
+                    </span>
+                    {uploadProgress && (
+                      <span className="font-sans font-bold text-[10px] text-amber-600 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Uploading {uploadProgress.current} of {uploadProgress.total}...</span>
+                      </span>
+                    )}
+                  </div>
                   
-                  <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto border border-zinc-200 rounded-2xl p-2.5 bg-zinc-50/30">
-                    {uploading ? (
-                      <div className="py-6 flex items-center justify-center gap-2 select-none">
-                        <Loader2 className="w-5 h-5 text-zinc-950 animate-spin" />
-                        <span className="font-sans font-bold text-zinc-400 text-[10px] uppercase tracking-wider">Uploading Assets...</span>
+                  <div className="flex flex-col gap-2 max-h-[540px] overflow-y-auto border border-zinc-200 rounded-2xl p-2.5 bg-zinc-50/30">
+                    {uploading && deckAssets.length === 0 ? (
+                      <div className="py-8 flex flex-col items-center justify-center gap-2 select-none">
+                        <Loader2 className="w-6 h-6 text-zinc-950 animate-spin" />
+                        <span className="font-sans font-bold text-zinc-600 text-xs">
+                          Uploading images ({uploadProgress ? `${uploadProgress.current}/${uploadProgress.total}` : "Preparing..."})...
+                        </span>
                       </div>
                     ) : deckAssets.length === 0 ? (
                       <div className="py-12 flex flex-col items-center justify-center select-none text-zinc-450 italic text-[10px] font-sans">
@@ -807,9 +869,40 @@ export default function PresentationsTab() {
                       deckAssets.map((asset, idx) => (
                         <div 
                           key={asset.id || idx}
-                          className="bg-white border border-zinc-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-3xs"
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", `${idx}`);
+                            setDraggedAssetIdx(idx);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverAssetIdx(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverAssetIdx === idx) setDragOverAssetIdx(null);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleDragDropAsset(idx);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedAssetIdx(null);
+                            setDragOverAssetIdx(null);
+                          }}
+                          className={`bg-white border rounded-xl p-3 flex items-center justify-between gap-3 shadow-3xs transition-all cursor-grab active:cursor-grabbing select-none ${
+                            draggedAssetIdx === idx
+                              ? "opacity-40 border-dashed border-zinc-400 bg-zinc-50 scale-98"
+                              : dragOverAssetIdx === idx
+                              ? "border-zinc-950 bg-zinc-100 shadow-sm scale-101"
+                              : "border-zinc-200 hover:border-zinc-300"
+                          }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0 flex-grow">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-grow">
+                            {/* Drag Grip Handle */}
+                            <div className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-700 shrink-0 p-0.5" title="Drag to reorder">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+
                             {/* thumbnail preview */}
                             <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-100 border border-zinc-200 shrink-0 flex items-center justify-center">
                               {asset.filename?.endsWith(".pdf") ? (
@@ -839,12 +932,13 @@ export default function PresentationsTab() {
                           </div>
 
                           {/* Sorting action controls */}
-                          <div className="flex items-center gap-1 select-none">
+                          <div className="flex items-center gap-1 select-none shrink-0">
                             <button
                               type="button"
                               onClick={() => moveAssetOrder(idx, "up")}
                               disabled={idx === 0}
                               className="p-1 hover:bg-zinc-100 rounded-md text-zinc-400 hover:text-zinc-900 transition-all cursor-pointer disabled:opacity-30"
+                              title="Move Up"
                             >
                               <ArrowUp className="w-3.5 h-3.5" />
                             </button>
@@ -853,6 +947,7 @@ export default function PresentationsTab() {
                               onClick={() => moveAssetOrder(idx, "down")}
                               disabled={idx === deckAssets.length - 1}
                               className="p-1 hover:bg-zinc-100 rounded-md text-zinc-400 hover:text-zinc-900 transition-all cursor-pointer disabled:opacity-30"
+                              title="Move Down"
                             >
                               <ArrowDown className="w-3.5 h-3.5" />
                             </button>
@@ -860,6 +955,7 @@ export default function PresentationsTab() {
                               type="button"
                               onClick={() => handleRemoveAsset(idx)}
                               className="p-1 hover:bg-red-50 rounded-md text-zinc-400 hover:text-red-600 transition-all cursor-pointer ml-1"
+                              title="Remove Asset"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -874,8 +970,8 @@ export default function PresentationsTab() {
 
             </div>
 
-            {/* Modal Actions Footer */}
-            <div className="flex items-center justify-end border-t border-zinc-100 pt-4 gap-3 select-none">
+            {/* Actions Footer */}
+            <div className="flex items-center justify-end border-t border-zinc-100 pt-6 mt-6 gap-3 select-none">
               <button
                 type="button"
                 onClick={() => setShowDeckModal(false)}
@@ -894,6 +990,7 @@ export default function PresentationsTab() {
               </button>
             </div>
 
+          </div>
           </div>
         </div>
       )}

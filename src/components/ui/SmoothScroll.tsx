@@ -17,14 +17,20 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
   // Initialize Lenis smooth scroll engine
   useEffect(() => {
+    const isAdminOrPortal = pathname?.startsWith("/admin") || pathname?.startsWith("/portal") || pathname?.startsWith("/presentation");
+
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      touchMultiplier: 1.8,
+      syncTouch: false,
     });
 
     lenisRef.current = lenis;
+
+    if (isAdminOrPortal) {
+      lenis.stop();
+    }
 
     // Connect Lenis scroll updates to GSAP ScrollTrigger and manage active hash removal
     lenis.on("scroll", () => {
@@ -66,6 +72,18 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       lenis.destroy();
     };
   }, []);
+
+  // Sync route changes to start/stop Lenis appropriately
+  useEffect(() => {
+    const isAdminOrPortal = pathname?.startsWith("/admin") || pathname?.startsWith("/portal") || pathname?.startsWith("/presentation");
+    if (lenisRef.current) {
+      if (isAdminOrPortal) {
+        lenisRef.current.stop();
+      } else {
+        lenisRef.current.start();
+      }
+    }
+  }, [pathname]);
 
   // Robust element scroller with layout re-sync
   const scrollToHashTarget = useCallback((hash: string) => {

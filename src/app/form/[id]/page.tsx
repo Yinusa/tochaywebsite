@@ -373,7 +373,7 @@ export default function PublicFormPage() {
   if (!form) return null;
 
   return (
-    <main className="w-full min-h-screen bg-[#f8f8f7] flex flex-col justify-between font-sans relative overflow-hidden">
+    <main className="w-full min-h-screen bg-[#f8f8f7] flex flex-col justify-between font-sans relative overflow-x-hidden">
       {/* Dynamic Navigation Header */}
       <Navbar />
 
