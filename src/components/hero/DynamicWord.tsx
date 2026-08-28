@@ -26,7 +26,7 @@ export const ROTATING_WORDS: WordConfig[] = [
   {
     id: "conviction",
     word: "conviction.",
-    fontClass: "font-sans font-bold text-zinc-950 tracking-tight",
+    fontClass: "font-sans font-bold text-zinc-950 tracking-[-0.04em]",
     ariaLabel: "Gilroy Bold",
   },
   {
