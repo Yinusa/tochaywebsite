@@ -17,7 +17,7 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
   // Initialize Lenis smooth scroll engine
   useEffect(() => {
-    const isAdminOrPortal = pathname?.startsWith("/admin") || pathname?.startsWith("/portal") || pathname?.startsWith("/presentation");
+    const isAdmin = pathname?.startsWith("/admin");
 
     const lenis = new Lenis({
       duration: 1.0,
@@ -28,7 +28,7 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
     lenisRef.current = lenis;
 
-    if (isAdminOrPortal) {
+    if (isAdmin) {
       lenis.stop();
     }
 
@@ -75,9 +75,9 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
   // Sync route changes to start/stop Lenis appropriately
   useEffect(() => {
-    const isAdminOrPortal = pathname?.startsWith("/admin") || pathname?.startsWith("/portal") || pathname?.startsWith("/presentation");
+    const isAdmin = pathname?.startsWith("/admin");
     if (lenisRef.current) {
-      if (isAdminOrPortal) {
+      if (isAdmin) {
         lenisRef.current.stop();
       } else {
         lenisRef.current.start();

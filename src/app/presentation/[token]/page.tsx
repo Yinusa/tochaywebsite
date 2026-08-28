@@ -333,9 +333,8 @@ export default function ClientShowcasePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center font-sans">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-900 mb-3" />
-        <span className="font-sans font-bold text-xs tracking-tight uppercase">Loading presentation showcase...</span>
+      <main className="min-h-screen bg-[#f8f8f7] flex items-center justify-center font-sans select-none">
+        <Loader2 className="w-7 h-7 animate-spin text-zinc-900" />
       </main>
     );
   }
@@ -394,6 +393,79 @@ export default function ClientShowcasePage() {
       setZoomScale(1);
       setRotationDegrees(0);
       setPdfPage(1);
+    }
+  };
+
+  // Keyboard navigation for desktop: Left/Right Arrow to switch, Escape to close
+  useEffect(() => {
+    if (activeAssetIdx === null) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevAsset();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextAsset();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setActiveAssetIdx(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeAssetIdx, filteredAssets.length]);
+
+  // Touch gesture swipe handling for mobile (swipe left/right to move, swipe down to close)
+  const touchStartPos = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartPos.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: Date.now(),
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartPos.current || e.changedTouches.length === 0) return;
+
+    const deltaX = e.changedTouches[0].clientX - touchStartPos.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartPos.current.y;
+    const duration = Date.now() - touchStartPos.current.time;
+
+    touchStartPos.current = null;
+
+    // Ignore slow drags or when user has zoomed into the image
+    if (duration > 900 || zoomScale > 1.05) return;
+
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    // Swipe down to close (vertical downward movement > 65px and dominant vertical direction)
+    if (deltaY > 65 && absY > absX * 1.2) {
+      setActiveAssetIdx(null);
+      return;
+    }
+
+    // Swipe left -> Next slide
+    if (deltaX < -45 && absX > absY) {
+      handleNextAsset();
+      return;
+    }
+
+    // Swipe right -> Prev slide
+    if (deltaX > 45 && absX > absY) {
+      handlePrevAsset();
+      return;
     }
   };
 
@@ -529,7 +601,12 @@ export default function ClientShowcasePage() {
 
       {/* Interactive Proofing Lightbox modal workspace */}
       {activeAsset && activeAssetIdx !== null && (
-        <div className="fixed inset-0 z-50 flex flex-col lg:flex-row overflow-hidden select-none bg-[#f8f8f7] text-[#09090b] animate-scale-in">
+        <div 
+          data-lenis-prevent
+          className="fixed inset-0 z-50 flex flex-col lg:flex-row overflow-hidden select-none bg-[#f8f8f7] text-[#09090b] animate-scale-in"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           
           {/* Left panel: Media Viewport */}
           <div className={`flex-grow flex flex-col justify-between relative overflow-hidden transition-all duration-500 ${
@@ -539,11 +616,15 @@ export default function ClientShowcasePage() {
             {/* Header top bar */}
             {!isFullscreenMedia && (
               <div className="py-4 px-6 flex items-center justify-between select-none bg-white/70 backdrop-blur-md border-b border-zinc-200/50 z-20 w-full">
-                <div className="flex items-center gap-3 min-w-0 pr-6">
+                <div className="flex items-center gap-3 min-w-0 pr-4">
                   <span className="font-sans font-bold text-[8px] text-zinc-400 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-sm select-none uppercase tracking-widest shrink-0">
                     {activeAsset.category}
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-200 shrink-0" />
+                  <span className="font-mono font-bold text-[11px] px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200/80 shrink-0" title="Slide Counter">
+                    {activeAssetIdx + 1} / {filteredAssets.length}
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-200 shrink-0 hidden sm:inline-block" />
                   <h3 className="font-sans font-black text-xs text-zinc-950 truncate block tracking-tight">
                     {activeAsset.filename}
                   </h3>
@@ -567,7 +648,7 @@ export default function ClientShowcasePage() {
                   <button 
                     onClick={() => setActiveAssetIdx(null)}
                     className="p-2 hover:bg-zinc-50 rounded-xl transition-all cursor-pointer text-zinc-400 hover:text-zinc-950"
-                    title="Close Reviewer"
+                    title="Close Reviewer (Esc / Swipe Down)"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -578,6 +659,10 @@ export default function ClientShowcasePage() {
             {/* Floating fullscreen top controls: Review toggle + Direct Close button */}
             {isFullscreenMedia && (
               <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
+                <span className="font-mono text-xs font-bold px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-700/80 text-white backdrop-blur-md shadow-2xl">
+                  {activeAssetIdx + 1} / {filteredAssets.length}
+                </span>
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -596,7 +681,7 @@ export default function ClientShowcasePage() {
                     setActiveAssetIdx(null);
                   }}
                   className="p-2.5 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white rounded-full hover:scale-105 transition-all cursor-pointer shadow-2xl backdrop-blur-md"
-                  title="Close Reviewer"
+                  title="Close Reviewer (Esc / Swipe Down)"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -606,6 +691,8 @@ export default function ClientShowcasePage() {
             {/* Main view frame viewport */}
             <div 
               onClick={() => setIsFullscreenMedia(!isFullscreenMedia)}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
               className={`flex-grow flex items-center justify-center relative overflow-hidden cursor-zoom-in ${
                 isFullscreenMedia ? "bg-black p-0 cursor-zoom-out" : "bg-zinc-50/40 p-6"
               }`}
@@ -694,6 +781,10 @@ export default function ClientShowcasePage() {
                     >
                       <RotateCw className="w-4 h-4" />
                     </button>
+                    <div className="w-px h-3.5 bg-zinc-200" />
+                    <span className="font-mono text-[9px] font-bold text-zinc-600 tracking-tight select-none">
+                      {activeAssetIdx + 1} / {filteredAssets.length}
+                    </span>
                   </div>
                 </div>
               )}
