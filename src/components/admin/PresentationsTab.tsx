@@ -326,34 +326,45 @@ export default function PresentationsTab() {
       expiresAt = new Date(now.setMonth(now.getMonth() + 1)).toISOString();
     }
 
-    const payloadDeck = {
-      ...editingDeck,
+    const cleanDeckPayload: any = {
+      id: editingDeck.id,
+      client_name: editingDeck.client_name?.trim(),
+      title: editingDeck.title?.trim(),
+      token: editingDeck.token?.trim() || "",
+      categories: editingDeck.categories || [],
       expires_at: expiresAt,
-      is_expired: expiresAt ? new Date(expiresAt) < new Date() : false
+      is_expired: expiresAt ? new Date(expiresAt) < new Date() : false,
+      updated_at: new Date().toISOString()
     };
 
     try {
       setLoading(true);
 
-      // Write Deck metadata to presentations table
+      // 1. Write Deck metadata to presentations table
       const { error: deckError } = await supabase
         .from("presentations")
-        .upsert([payloadDeck]);
+        .upsert([cleanDeckPayload]);
 
       if (deckError) throw deckError;
 
-      // Write Deck assets list (clear first to prevent duplicates on edit)
+      // 2. Write Deck assets list (clear first then insert new list)
       if (editingDeck.id) {
-        await supabase.from("presentation_assets").delete().eq("presentation_id", editingDeck.id);
+        const { error: deleteError } = await supabase
+          .from("presentation_assets")
+          .delete()
+          .eq("presentation_id", editingDeck.id);
+
+        if (deleteError) throw deleteError;
         
         if (deckAssets.length > 0) {
-          const cleanAssets = deckAssets.map(asset => {
-            const copy = { ...asset };
-            if (copy.id?.startsWith("asset-")) {
-              delete copy.id; // Let database generate true UUIDs
-            }
-            return copy;
-          });
+          const cleanAssets = deckAssets.map((asset, idx) => ({
+            presentation_id: editingDeck.id,
+            file_url: asset.file_url,
+            filename: asset.filename,
+            category: asset.category || "General",
+            sort_order: idx,
+            status: asset.status || "Review"
+          }));
 
           const { error: assetsError } = await supabase
             .from("presentation_assets")
@@ -363,42 +374,18 @@ export default function PresentationsTab() {
         }
       }
 
-      setAlert({ type: "success", message: "Presentation deck saved successfully!" });
-      setShowDeckModal(false);
-      setEditingDeck(null);
-      loadPresentations();
-    } catch (err: any) {
-      console.warn("Supabase write failed, saving locally to browser storage cache...", err);
-      
-      // Offline fallback saving
-      const localDecks = [...decks];
-      const existIdx = localDecks.findIndex(d => d.id === payloadDeck.id);
-      
-      const newDeck: PresentationDeck = {
-        id: payloadDeck.id!,
-        client_name: payloadDeck.client_name!,
-        title: payloadDeck.title!,
-        token: payloadDeck.token!,
-        categories: payloadDeck.categories!,
-        expires_at: payloadDeck.expires_at,
-        is_expired: payloadDeck.is_expired!,
-        created_at: new Date().toISOString(),
-        views_count: existIdx >= 0 ? localDecks[existIdx].views_count : 0
-      };
-
-      if (existIdx >= 0) {
-        localDecks[existIdx] = newDeck;
-      } else {
-        localDecks.unshift(newDeck);
+      // Update local storage cache to match
+      if (editingDeck.id) {
+        localStorage.setItem(`tochay_offline_assets_${editingDeck.id}`, JSON.stringify(deckAssets));
       }
 
-      setDecks(localDecks);
-      localStorage.setItem("tochay_offline_presentations", JSON.stringify(localDecks));
-      localStorage.setItem(`tochay_offline_assets_${newDeck.id}`, JSON.stringify(deckAssets));
-      
-      setAlert({ type: "success", message: "Saved changes locally (offline client mode)." });
+      setAlert({ type: "success", message: "Presentation deck and deliverables saved successfully!" });
       setShowDeckModal(false);
       setEditingDeck(null);
+      await loadPresentations();
+    } catch (err: any) {
+      console.error("Supabase presentation save failed:", err);
+      setAlert({ type: "error", message: `Save failed: ${err.message || "Database write error"}` });
     } finally {
       setLoading(false);
     }
