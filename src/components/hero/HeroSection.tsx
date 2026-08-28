@@ -32,8 +32,8 @@ export default function HeroSection() {
         ref={containerRef}
         className="relative max-w-4xl w-full text-center select-none"
       >
-        {/* Main Hero Headline - Gilroy Medium, centered, elegantly sized and kerned tightly */}
-        <h1 className="font-sans font-medium text-2xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight text-zinc-950 leading-relaxed sm:leading-relaxed md:leading-normal">
+        {/* Main Hero Headline - Gilroy Medium, centered, elegantly sized and kerned tightly (-35 tracking) */}
+        <h1 className="font-sans font-medium text-2xl sm:text-4xl md:text-5xl lg:text-6xl tracking-[-0.035em] text-zinc-950 leading-relaxed sm:leading-relaxed md:leading-normal">
           <span>Design with </span>
           <DynamicWord />
         </h1>
