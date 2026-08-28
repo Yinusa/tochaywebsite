@@ -390,15 +390,19 @@ export default function ClientShowcasePage() {
         handleNextAsset();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        setActiveAssetIdx(null);
+        if (isFullscreenMedia) {
+          setIsFullscreenMedia(false);
+        } else {
+          setActiveAssetIdx(null);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeAssetIdx, filteredAssets.length]);
+  }, [activeAssetIdx, filteredAssets.length, isFullscreenMedia]);
 
-  // Touch gesture swipe handling for mobile (swipe left/right to move, swipe down to close)
+  // Touch gesture swipe handling for mobile (swipe left/right to move, swipe down to close / exit fullscreen)
   const touchStartPos = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -426,9 +430,13 @@ export default function ClientShowcasePage() {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
-    // Swipe down to close (vertical downward movement > 65px and dominant vertical direction)
-    if (deltaY > 65 && absY > absX * 1.2) {
-      setActiveAssetIdx(null);
+    // Swipe down: if in fullscreen -> exit fullscreen back to asset review; if in review -> close modal
+    if (deltaY > 60 && absY > absX * 1.2) {
+      if (isFullscreenMedia) {
+        setIsFullscreenMedia(false);
+      } else {
+        setActiveAssetIdx(null);
+      }
       return;
     }
 
@@ -517,10 +525,10 @@ export default function ClientShowcasePage() {
         </div>
         
         {/* Category Pills filtering tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none select-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar select-none w-full flex-nowrap">
           <button
             onClick={() => setSelectedCategory("All")}
-            className={`px-4 py-2 rounded-full font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+            className={`h-9 px-4.5 rounded-full font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border whitespace-nowrap shrink-0 flex items-center justify-center ${
               selectedCategory === "All"
                 ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
                 : "bg-white text-zinc-500 border-zinc-200/50 hover:bg-white/90 hover:text-zinc-900"
@@ -533,7 +541,7 @@ export default function ClientShowcasePage() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border ${
+              className={`h-9 px-4.5 rounded-full font-sans font-semibold text-xs tracking-tight transition-all cursor-pointer border whitespace-nowrap shrink-0 flex items-center justify-center ${
                 selectedCategory === cat
                   ? "bg-zinc-950 text-white border-zinc-950 shadow-sm"
                   : "bg-white text-zinc-500 border-zinc-200/50 hover:bg-white/90 hover:text-zinc-900"
