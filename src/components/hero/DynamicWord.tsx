@@ -93,7 +93,7 @@ export default function DynamicWord() {
   return (
     <span
       ref={containerRef}
-      className="inline-block relative min-w-[140px] sm:min-w-[220px] md:min-w-[260px] text-left align-baseline"
+      className="inline-block relative align-baseline"
       aria-live="polite"
       aria-label={`Current swapping style: ${current.ariaLabel}`}
     >
