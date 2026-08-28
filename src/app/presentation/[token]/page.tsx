@@ -158,46 +158,56 @@ export default function ClientShowcasePage() {
 
       setDeck(deckData);
       setAssets(assetsList);
+      setLoading(false);
 
       if (deckData.is_expired) {
-        setLoading(false);
         return;
       }
 
-      // 2. Increment view counter in background
+      // 2. Increment view counter in background (non-blocking)
       try {
-        await supabase.from("presentation_views").insert([{ presentation_id: deckData.id }]);
+        supabase.from("presentation_views").insert([{ presentation_id: deckData.id }]).then();
       } catch (err) {
         console.warn("Failed to write analytics view counts", err);
       }
 
-      // 3. Load comments
-      await loadAllComments(assetsList);
+      // 3. Load comments in background (batch query)
+      loadAllComments(assetsList);
 
     } catch (err: any) {
       setErrorScreen("Unable to load presentation. Please verify link.");
-    } finally {
       setLoading(false);
     }
   };
 
   const loadAllComments = async (assetsList: PresentationAsset[]) => {
+    if (assetsList.length === 0) return;
     const commentsMap: Record<string, AssetComment[]> = {};
-    
-    for (const asset of assetsList) {
-      try {
-        const { data, error } = await supabase
-          .from("presentation_comments")
-          .select("*")
-          .eq("presentation_asset_id", asset.id)
-          .order("created_at", { ascending: true });
+    const assetIds = assetsList.map(a => a.id);
 
-        if (error) throw error;
-        commentsMap[asset.id] = data || [];
-      } catch (err) {
-        // local comments cache
+    try {
+      const { data, error } = await supabase
+        .from("presentation_comments")
+        .select("*")
+        .in("presentation_asset_id", assetIds)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      // Group by asset ID
+      (data || []).forEach((comment: AssetComment) => {
+        if (!commentsMap[comment.presentation_asset_id]) {
+          commentsMap[comment.presentation_asset_id] = [];
+        }
+        commentsMap[comment.presentation_asset_id].push(comment);
+      });
+    } catch (err) {
+      // local comments cache fallback
+      for (const asset of assetsList) {
         const localComments = localStorage.getItem(`tochay_offline_comments_${asset.id}`);
-        commentsMap[asset.id] = localComments ? JSON.parse(localComments) : [];
+        if (localComments) {
+          commentsMap[asset.id] = JSON.parse(localComments);
+        }
       }
     }
     setComments(commentsMap);
@@ -331,40 +341,6 @@ export default function ClientShowcasePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#f8f8f7] flex items-center justify-center font-sans select-none">
-        <Loader2 className="w-7 h-7 animate-spin text-zinc-900" />
-      </main>
-    );
-  }
-
-  if (errorScreen) {
-    return (
-      <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans select-none">
-        <div className="w-full max-w-md bg-white/70 border border-zinc-200/50 rounded-3xl p-8 shadow-xl flex flex-col items-center text-center gap-4">
-          <X className="w-12 h-12 text-red-500 bg-red-50 rounded-full p-2.5" />
-          <h1 className="font-sans font-black text-lg tracking-tight uppercase mt-1">Presentation Access Locked</h1>
-          <p className="font-sans text-xs text-zinc-400 leading-relaxed max-w-xs">{errorScreen}</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (deck?.is_expired) {
-    return (
-      <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans select-none">
-        <div className="w-full max-w-md bg-white/70 border border-zinc-200/50 rounded-3xl p-8 shadow-xl flex flex-col items-center text-center gap-4">
-          <Lock className="w-12 h-12 text-amber-500 bg-amber-50 rounded-full p-2.5" />
-          <h1 className="font-sans font-black text-lg tracking-tight uppercase mt-1">Link Access Expired</h1>
-          <p className="font-sans text-xs text-zinc-400 leading-relaxed max-w-xs">
-            This presentation deck link has expired. Please contact the designer to request extended access.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
   // Filter showcase assets by category
   const filteredAssets = selectedCategory === "All"
     ? assets
@@ -470,6 +446,40 @@ export default function ClientShowcasePage() {
   };
 
   const activeAsset = activeAssetIdx !== null ? filteredAssets[activeAssetIdx] : null;
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f8f8f7] flex items-center justify-center font-sans select-none">
+        <Loader2 className="w-7 h-7 animate-spin text-zinc-900" />
+      </main>
+    );
+  }
+
+  if (errorScreen) {
+    return (
+      <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans select-none">
+        <div className="w-full max-w-md bg-white/70 border border-zinc-200/50 rounded-3xl p-8 shadow-xl flex flex-col items-center text-center gap-4">
+          <X className="w-12 h-12 text-red-500 bg-red-50 rounded-full p-2.5" />
+          <h1 className="font-sans font-black text-lg tracking-tight uppercase mt-1">Presentation Access Locked</h1>
+          <p className="font-sans text-xs text-zinc-400 leading-relaxed max-w-xs">{errorScreen}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (deck?.is_expired) {
+    return (
+      <main className="min-h-screen bg-[#f8f8f7] text-[#09090b] flex flex-col justify-center items-center p-6 font-sans select-none">
+        <div className="w-full max-w-md bg-white/70 border border-zinc-200/50 rounded-3xl p-8 shadow-xl flex flex-col items-center text-center gap-4">
+          <Lock className="w-12 h-12 text-amber-500 bg-amber-50 rounded-full p-2.5" />
+          <h1 className="font-sans font-black text-lg tracking-tight uppercase mt-1">Link Access Expired</h1>
+          <p className="font-sans text-xs text-zinc-400 leading-relaxed max-w-xs">
+            This presentation deck link has expired. Please contact the designer to request extended access.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="w-full min-h-screen bg-[#f8f8f7] flex flex-col justify-between font-sans relative">
