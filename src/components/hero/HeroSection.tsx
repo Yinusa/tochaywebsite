@@ -33,7 +33,7 @@ export default function HeroSection() {
         className="relative max-w-4xl w-full text-center select-none"
       >
         {/* Main Hero Headline - Gilroy Medium, centered, elegantly sized and kerned tightly (-35 tracking) */}
-        <h1 className="font-sans font-medium text-2xl sm:text-4xl md:text-5xl lg:text-6xl tracking-[-0.035em] text-zinc-950 leading-relaxed sm:leading-relaxed md:leading-normal">
+        <h1 className="font-sans font-medium text-2xl sm:text-4xl md:text-5xl lg:text-6xl tracking-[-0.035em] text-zinc-950 leading-tight">
           <span>Design with </span>
           <DynamicWord />
         </h1>

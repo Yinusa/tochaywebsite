@@ -14,25 +14,25 @@ export const ROTATING_WORDS: WordConfig[] = [
   {
     id: "intention",
     word: "intention.",
-    fontClass: "font-editorial italic font-normal text-zinc-950 tracking-tight",
+    fontClass: "font-editorial italic font-normal text-zinc-950 tracking-tight leading-none",
     ariaLabel: "Ogg Medium Italic Editorial Serif",
   },
   {
     id: "creativity",
     word: "creativity.",
-    fontClass: "font-script font-normal text-zinc-950 scale-[1.4] origin-left inline-block pr-3 pb-1",
+    fontClass: "font-script font-normal text-zinc-950 scale-[1.1] origin-bottom-left leading-[0.7]",
     ariaLabel: "Amsterdam Signature Script",
   },
   {
     id: "conviction",
     word: "conviction.",
-    fontClass: "font-sans font-bold text-zinc-950 tracking-[-0.04em]",
+    fontClass: "font-sans font-bold text-zinc-950 tracking-[-0.04em] leading-none",
     ariaLabel: "Gilroy Bold",
   },
   {
     id: "clarity",
     word: "clarity.",
-    fontClass: "font-mono font-medium text-zinc-950 tracking-tighter",
+    fontClass: "font-mono font-medium text-zinc-950 tracking-tighter leading-none",
     ariaLabel: "Space Mono Monospace",
   },
 ];
@@ -93,13 +93,13 @@ export default function DynamicWord() {
   return (
     <span
       ref={containerRef}
-      className="inline-inline-flex relative overflow-visible min-w-[160px] sm:min-w-[240px] md:min-w-[280px] align-baseline"
+      className="inline-block relative min-w-[140px] sm:min-w-[220px] md:min-w-[260px] text-left align-baseline"
       aria-live="polite"
       aria-label={`Current swapping style: ${current.ariaLabel}`}
     >
       <span
         ref={wordRef}
-        className={`inline-block transition-all duration-100 ease-out select-none ${current.fontClass}`}
+        className={`inline-block select-none align-baseline ${current.fontClass}`}
       >
         {current.word}
       </span>
