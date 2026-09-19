@@ -24,12 +24,6 @@ export const ROTATING_WORDS: WordConfig[] = [
     ariaLabel: "Amsterdam Signature Script",
   },
   {
-    id: "conviction",
-    word: "conviction.",
-    fontClass: "font-sans font-bold text-zinc-950 tracking-[-0.04em] leading-none",
-    ariaLabel: "Gilroy Bold",
-  },
-  {
     id: "clarity",
     word: "clarity.",
     fontClass: "font-mono font-medium text-zinc-950 tracking-tighter leading-none",
