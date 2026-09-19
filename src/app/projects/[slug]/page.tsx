@@ -215,29 +215,31 @@ export default function ProjectPage({ params }: PageProps) {
     e.preventDefault();
     if (typeof window !== "undefined") {
       const prevPath = sessionStorage.getItem("tochay_prev_pathname");
-      if (prevPath) {
-        if (prevPath === "/explore" || prevPath.startsWith("/explore/") || prevPath === "/") {
-          router.push(prevPath === "/" ? "/#case-studies-section" : prevPath, { scroll: false });
-          return;
-        }
+      if (prevPath && (prevPath === "/" || prevPath === "/explore" || prevPath.startsWith("/explore/"))) {
+        router.back();
+        return;
+      }
+      if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
+        router.back();
+        return;
       }
     }
     
     // Fallback: If it's a case study, return to case studies. Otherwise, route by category explore index.
     if (project?.is_case_study) {
-      router.push("/#case-studies-section", { scroll: false });
+      router.push("/#case-studies-section");
       return;
     }
 
     const cat = project?.category?.toUpperCase() || "";
     if (cat === "BRAND DESIGN" || cat === "BRAND SYSTEM" || cat === "VISUAL SYSTEM") {
-      router.push("/explore/branding", { scroll: false });
+      router.push("/explore/branding");
     } else if (cat === "GRAPHIC DESIGN" || cat === "PACKAGING" || cat === "ART DIRECTION") {
-      router.push("/explore/graphic-design", { scroll: false });
+      router.push("/explore/graphic-design");
     } else if (cat === "PRODUCT DESIGN" || cat === "UI/UX" || cat === "PRODUCT") {
-      router.push("/explore/product-design", { scroll: false });
+      router.push("/explore/product-design");
     } else {
-      router.push("/#case-studies-section", { scroll: false });
+      router.push("/#case-studies-section");
     }
   };
 

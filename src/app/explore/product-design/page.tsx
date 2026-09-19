@@ -190,6 +190,18 @@ export default function ProductDesignExplorePage() {
     );
   }
 
+  const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined") {
+      const prevPath = sessionStorage.getItem("tochay_prev_pathname");
+      if (prevPath === "/" || (window.history.length > 1 && document.referrer.includes(window.location.host))) {
+        router.back();
+        return;
+      }
+    }
+    router.push("/#capabilities-section");
+  };
+
   return (
     <div
       ref={containerRef}
@@ -212,14 +224,14 @@ export default function ProductDesignExplorePage() {
           }`}
         >
           <div className="w-full max-w-7xl mx-auto flex items-center justify-end">
-            <Link
+            <a
               href="/#capabilities-section"
-              scroll={false}
+              onClick={handleClose}
               className="group flex items-center gap-2 font-sans font-semibold text-xs sm:text-sm text-white hover:text-zinc-300 transition-colors duration-300 cursor-pointer"
             >
               <span>Close</span>
               <X className="w-4.5 h-4.5 text-zinc-400 group-hover:rotate-90 transition-transform duration-300" />
-            </Link>
+            </a>
           </div>
         </header>
       </div>

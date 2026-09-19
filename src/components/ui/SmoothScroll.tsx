@@ -119,6 +119,17 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
     return false;
   }, []);
 
+  const isPopStateRef = useRef(false);
+
+  // Track browser history popstate (back/forward) events
+  useEffect(() => {
+    const handlePopState = () => {
+      isPopStateRef.current = true;
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Track SPA history pathnames
   useEffect(() => {
     if (prevPathnameRef.current && prevPathnameRef.current !== pathname) {
@@ -131,6 +142,8 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
 
   useIsomorphicLayoutEffect(() => {
     const isRouteChange = prevPathnameRef.current !== null && prevPathnameRef.current !== pathname;
+    const wasPopState = isPopStateRef.current;
+    isPopStateRef.current = false;
     prevPathnameRef.current = pathname;
 
     const hash = typeof window !== "undefined" ? window.location.hash : "";
@@ -142,7 +155,7 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       scrollToHashTarget(hash);
 
       // 2. Multi-stage follow-ups as dynamic layout & GSAP triggers hydrate
-      const delays = [30, 80, 180, 350, 600];
+      const delays = [20, 60, 150, 300, 500];
       const timers = delays.map((delay) =>
         setTimeout(() => {
           scrollToHashTarget(hash);
@@ -152,6 +165,14 @@ export default function SmoothScroll({ children }: SmoothScrollProps) {
       return () => {
         timers.forEach((t) => clearTimeout(t));
       };
+    } else if (wasPopState) {
+      // Browser history navigation: allow native scroll restoration to position, then sync Lenis
+      requestAnimationFrame(() => {
+        if (lenisRef.current) {
+          lenisRef.current.scrollTo(window.scrollY, { immediate: true });
+        }
+        ScrollTrigger.refresh();
+      });
     } else if (isRouteChange) {
       // Navigating to a clean new route without a hash -> scroll to top immediately
       window.scrollTo(0, 0);
