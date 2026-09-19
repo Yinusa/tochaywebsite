@@ -613,7 +613,7 @@ export default function ProjectPage({ params }: PageProps) {
               onMouseLeave={handleMouseLeaveNext}
               onMouseUp={handleMouseUpNext}
               onMouseMove={handleMouseMoveNext}
-              className={`w-full flex flex-row items-end gap-0 overflow-x-auto scrollbar-none py-12 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
+              className={`w-full flex flex-row items-start gap-0 overflow-x-auto scrollbar-none py-12 pl-[max(48px,calc((100vw-1280px)/2+48px))] pr-[max(48px,calc((100vw-1280px)/2+48px))] ${
                 isDraggingNext ? "select-none" : ""
               }`}
             >
@@ -637,11 +637,11 @@ export default function ProjectPage({ params }: PageProps) {
                 </div>
 
                 {/* Card Text Below Graphic */}
-                <div className="flex flex-col gap-0.5 select-none pl-1">
-                  <span className="font-sans font-medium text-[9px] sm:text-[10px] text-zinc-500 uppercase tracking-widest">
+                <div className="flex flex-col gap-0.5 select-none pl-1 max-w-full">
+                  <span className="font-sans font-medium text-[9px] sm:text-[10px] text-zinc-500 uppercase tracking-widest truncate">
                     {proj.category}
                   </span>
-                  <span className="font-sans font-bold text-sm sm:text-base text-white">
+                  <span className="font-sans font-bold text-sm sm:text-base text-white truncate">
                     {proj.title}
                   </span>
                 </div>
