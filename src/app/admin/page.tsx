@@ -3831,10 +3831,12 @@ export default function AdminPage() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="flex flex-col gap-1">
-                                <label className="font-sans text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5">Display Label Override</label>
+                                <label className="font-sans text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                                  Display Label Override (Flyer Count / Bullet Text)
+                                </label>
                                 <input
                                   type="text"
-                                  placeholder={baseName}
+                                  placeholder={`e.g. ${baseName} (1x flyer a week)`}
                                   value={item.custom_name || ""}
                                   onChange={(e) => {
                                     const val = e.target.value;
@@ -3842,6 +3844,9 @@ export default function AdminPage() {
                                   }}
                                   className="bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2 px-3 text-xs font-sans text-zinc-950 outline-hidden"
                                 />
+                                <span className="text-[10px] text-zinc-400 font-sans">
+                                  Controls the bullet text on website pricing cards and client portals.
+                                </span>
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="font-sans text-[9px] text-zinc-400 uppercase tracking-wider pl-0.5">Invoice Rate Override (₦)</label>
@@ -4009,6 +4014,30 @@ export default function AdminPage() {
                     onChange={(e) => setEditingCard({ ...editingCard, addon_price: Number(e.target.value) })}
                     className="w-full bg-zinc-50 border border-zinc-200 focus:border-zinc-500 focus:bg-white rounded-xl py-2.5 px-4 text-xs font-sans font-semibold outline-hidden text-zinc-950"
                   />
+                </div>
+              )}
+
+              {editingCard.id && (
+                <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-50/70 p-4 rounded-2xl">
+                  <div className="flex flex-col">
+                    <span className="font-sans font-bold text-xs text-zinc-950">Package Inclusions & Flyer Count</span>
+                    <span className="font-sans text-[11px] text-zinc-500 mt-0.5">Customize flyer frequency, add services, and set display labels</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = editingCard.id;
+                      if (!id) return;
+                      setShowCardModal(false);
+                      setEditingCard(null);
+                      setInclusionsCardId(id);
+                      setShowInclusionsModal(true);
+                    }}
+                    className="px-3.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shadow-xs"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Manage Deliverables</span>
+                  </button>
                 </div>
               )}
             </div>

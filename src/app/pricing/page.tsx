@@ -46,13 +46,13 @@ const STATIC_CARDS = [
     category: "identity", 
     tier: "standard", 
     price: 50000, 
-    description: "Logo Design, Business Card Design, Typography Selection, Brand Color Palette Selection, Mockups",
+    description: "Logo Design, Business Card Design, Typography Selection, Brand Color Palette Selection, 3 Mockups",
     inclusions: [
       { name: "Logo Design", price: 35000 },
       { name: "Business Card Design", price: 10000 },
       { name: "Typography Selection", price: 5000 },
       { name: "Brand Color Palette Selection", price: 5000 },
-      { name: "Mockups", price: 5000 }
+      { name: "3 Mockups", price: 3000 }
     ]
   },
   { 
@@ -61,7 +61,7 @@ const STATIC_CARDS = [
     category: "identity", 
     tier: "premium", 
     price: 87000, 
-    description: "Logo Design, Social Media Designs, Brand Guidelines, Business Card Design, Typography Selection, Brand Color Palette Selection, Mockups",
+    description: "Logo Design, Social Media Designs, Brand Guidelines, Business Card Design, Typography Selection, Brand Color Palette Selection, 5 Mockups",
     inclusions: [
       { name: "Logo Design", price: 35000 },
       { name: "Social Media Designs", price: 24000 },
@@ -69,7 +69,7 @@ const STATIC_CARDS = [
       { name: "Business Card Design", price: 10000 },
       { name: "Typography Selection", price: 5000 },
       { name: "Brand Color Palette Selection", price: 5000 },
-      { name: "Mockups", price: 5000 }
+      { name: "5 Mockups", price: 5000 }
     ]
   },
   { 
@@ -646,7 +646,9 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {identitySuites.map((card, idx) => {
               const inCart = cart.some((x) => x.id === card.id);
-              const inclusions = card.description ? card.description.split(", ") : [];
+              const inclusions = card.inclusions && card.inclusions.length > 0
+                ? card.inclusions.map((inc: any) => inc.name)
+                : (card.description ? card.description.split(", ") : []);
               const isFeatured = idx === 1;
 
               return (
@@ -751,7 +753,9 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {assetSuites.map((card, idx) => {
               const inCart = cart.some((x) => x.id === card.id);
-              const inclusions = card.description ? card.description.split(", ") : [];
+              const inclusions = card.inclusions && card.inclusions.length > 0
+                ? card.inclusions.map((inc: any) => inc.name)
+                : (card.description ? card.description.split(", ") : []);
               const isFeatured = idx === 1;
 
               return (
