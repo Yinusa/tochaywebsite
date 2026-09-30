@@ -859,6 +859,35 @@ export default function AdminPage() {
           .eq("id", editingCard.id);
         if (error) throw error;
 
+        // Also sync and save any deliverables/inclusions for this package
+        const cardItems = cardServiceItems.filter(item => item.card_id === editingCard.id);
+        if (cardItems.length > 0) {
+          for (const item of cardItems) {
+            const updatedPrice = (editingCard.category === "asset" && cardItems.length === 1)
+              ? Number(editingCard.price)
+              : (item.price_override !== null && item.price_override !== undefined ? Number(item.price_override) : null);
+
+            await supabase
+              .from("card_service_items")
+              .update({
+                custom_name: item.custom_name || null,
+                price_override: updatedPrice
+              })
+              .eq("id", item.id);
+          }
+
+          setCardServiceItems(prev => prev.map(item => {
+            if (item.card_id !== editingCard.id) return item;
+            const updatedPrice = (editingCard.category === "asset" && cardItems.length === 1)
+              ? Number(editingCard.price)
+              : item.price_override;
+            return {
+              ...item,
+              price_override: updatedPrice
+            };
+          }));
+        }
+
         setCards(prev => prev.map(c => c.id === editingCard.id ? { ...c, ...payload } : c));
         setAlert({ type: "success", message: `Package ${editingCard.name} updated.` });
       } else {
@@ -4018,26 +4047,85 @@ export default function AdminPage() {
               )}
 
               {editingCard.id && (
-                <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-50/70 p-4 rounded-2xl">
-                  <div className="flex flex-col">
-                    <span className="font-sans font-bold text-xs text-zinc-950">Package Inclusions & Flyer Count</span>
-                    <span className="font-sans text-[11px] text-zinc-500 mt-0.5">Customize flyer frequency, add services, and set display labels</span>
+                <div className="pt-4 border-t border-zinc-200 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="font-sans font-bold text-xs text-zinc-950">
+                        {editingCard.category === "asset" ? "Flyer Frequency & Deliverables" : "Package Inclusions & Deliverables"}
+                      </span>
+                      <span className="font-sans text-[11px] text-zinc-500 mt-0.5">
+                        {editingCard.category === "asset"
+                          ? "Edit the number of flyers and delivery cadence displayed to clients"
+                          : "Edit display labels and deliverables for this suite package"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = editingCard.id;
+                        if (!id) return;
+                        setShowCardModal(false);
+                        setEditingCard(null);
+                        setInclusionsCardId(id);
+                        setShowInclusionsModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-sans font-bold text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      <span>Manage Services ({cardServiceItems.filter(item => item.card_id === editingCard.id).length})</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const id = editingCard.id;
-                      if (!id) return;
-                      setShowCardModal(false);
-                      setEditingCard(null);
-                      setInclusionsCardId(id);
-                      setShowInclusionsModal(true);
-                    }}
-                    className="px-3.5 py-2 bg-zinc-950 hover:bg-[#ffd230] hover:text-zinc-950 text-white rounded-xl font-sans font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shadow-xs"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>Manage Deliverables</span>
-                  </button>
+
+                  {cardServiceItems.filter(item => item.card_id === editingCard.id).length === 0 ? (
+                    <div className="p-4 bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl text-center select-none">
+                      <span className="font-sans text-xs text-zinc-400 italic">No deliverables mapped yet. Click Manage Services above to add services.</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {cardServiceItems
+                        .filter(item => item.card_id === editingCard.id)
+                        .map((item) => {
+                          const baseName = item.master_services?.name || "Service Item";
+                          const currentItemRate = (editingCard.category === "asset" && cardServiceItems.filter(x => x.card_id === editingCard.id).length === 1)
+                            ? Number(editingCard.price || 0)
+                            : (item.price_override !== null && item.price_override !== undefined ? Number(item.price_override) : Number(item.master_services?.price || 0));
+
+                          return (
+                            <div key={item.id} className="p-4 bg-zinc-50/80 border border-zinc-200 rounded-2xl flex flex-col gap-3">
+                              <div className="flex items-center justify-between">
+                                <span className="font-sans font-bold text-xs text-zinc-950">
+                                  {baseName}
+                                </span>
+                                <span className="font-mono text-[11px] text-zinc-600 font-semibold bg-white px-2 py-0.5 rounded-md border border-zinc-200">
+                                  ₦{currentItemRate.toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5">
+                                <label className="font-sans font-semibold text-[10px] text-zinc-400 uppercase tracking-wider pl-0.5">
+                                  {editingCard.category === "asset" ? "Number of Flyers / Delivery Cadence" : "Display Label Override"}
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder={editingCard.category === "asset" ? "e.g. Flyer Design (1x flyer a week)" : baseName}
+                                  value={item.custom_name || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCardServiceItems(prev => prev.map(x => x.id === item.id ? { ...x, custom_name: val } : x));
+                                  }}
+                                  className="w-full bg-white border border-zinc-200 focus:border-zinc-500 rounded-xl py-2.5 px-3.5 text-xs font-sans font-semibold outline-hidden text-zinc-950 shadow-3xs"
+                                />
+                                <span className="font-sans text-[10px] text-zinc-400">
+                                  {editingCard.category === "asset"
+                                    ? "This label is displayed on website pricing cards, quotes, and client portals."
+                                    : "Overrides the bullet text displayed on live pricing cards."}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
